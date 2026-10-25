@@ -1,0 +1,19 @@
+name: Tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/agent-grand-prix-, path: agp }
+      - name: Backup tool
+        run: python3 -m unittest discover -s ops/backup -v
+      - name: Scripts parse
+        run: for f in ops/server/install.sh ops/check/server-check.sh ops/ci/ssh-setup.sh; do bash -n "$f"; done
+      - name: Benchmark runs
+        run: node ops/bench/race-bench.mjs agp/js --seconds 2 --races 8

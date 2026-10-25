@@ -1,0 +1,17 @@
+# Read-only report on the shared server: memory, disk, CPU, every service and its memory, open ports, versions, data
+# sizes, backups and timers. Changes nothing. Runs every Monday and whenever you press "Run workflow".
+name: Server check
+on:
+  schedule: [{ cron: '0 6 * * 1' }]
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Report
+        run: $SSH 'bash -s' < ops/check/server-check.sh | tee -a "$GITHUB_STEP_SUMMARY"
