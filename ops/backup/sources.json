@@ -1,0 +1,21 @@
+{
+  "_about": "What the nightly backup copies on the shared server. 'sqlite' = SQLite files (online backup API, services keep running); 'copy' = files or folders copied as they are. Globs allowed; missing paths are skipped and listed in the manifest. Env files hold the server-made secrets (for example Palasora's ACCESS_ENCRYPTION_KEY): without them a restored database can't be used, so they are backed up too and the off-server copy is encrypted.",
+  "root": "/var/backups/novenique",
+  "keep": 14,
+  "sets": [
+    {
+      "name": "palasora",
+      "sqlite": ["/var/lib/palasora/data/pb_data/*.db", "/var/lib/palasora/data/*.db"],
+      "copy": ["/var/lib/palasora/data/pb_data/storage", "/var/lib/palasora/data/analytics", "/var/lib/palasora/data/*.duckdb", "/etc/palasora.env"]
+    },
+    {
+      "name": "agent-grand-prix",
+      "sqlite": ["/var/lib/agent-grand-prix/*.db"],
+      "copy": ["/var/lib/private/agp", "/etc/agent-grand-prix.env"]
+    },
+    {
+      "name": "web-server",
+      "copy": ["/etc/caddy", "/var/lib/private/caddy"]
+    }
+  ]
+}

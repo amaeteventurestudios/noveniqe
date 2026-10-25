@@ -1,0 +1,47 @@
+# Keeps a copy of the newest server backup OFF the server, so a lost server is not lost data. Every night after the
+# backup it fetches the newest backup folder, encrypts it here with your BACKUP_PASSPHRASE (AES-256, the server never
+# sees the passphrase) and stores it as this run's artifact for 30 days. The repository is public: without the passphrase
+# the file is unreadable. Keep the passphrase somewhere safe too (a password manager): restoring needs it.
+# It also fails, which emails you, when the newest backup on the server is more than 30 hours old.
+# One-time setup: the three SERVER_* secrets, plus a secret BACKUP_PASSPHRASE (any long random sentence).
+name: Off-server backup copy
+on:
+  schedule: [{ cron: '15 4 * * *' }]
+  workflow_dispatch:
+concurrency: server-ops
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Check the newest backup is fresh
+        run: |
+          set -euo pipefail
+          $SSH 'sudo python3 /opt/novenique/ops/backup/novenique_backup.py status' > status.json
+          NEWEST=$(python3 -c "import json; print(json.load(open('status.json')).get('newest',''))")
+          AGE=$(python3 -c "import json; print(json.load(open('status.json')).get('age_hours', 9999))")
+          echo "NEWEST=$NEWEST" >> "$GITHUB_ENV"
+          echo "Newest backup: ${NEWEST:-none}, ${AGE} hours old" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ -n "$NEWEST" ] || { echo '::error::There is no backup on the server yet.'; exit 1; }
+          python3 -c "import sys; sys.exit(0 if float('$AGE') <= 30 else 1)" || { echo "::error::The newest backup is $AGE hours old: the nightly backup is not running."; exit 1; }
+      - name: Fetch and encrypt
+        env: { PASS: '${{ secrets.BACKUP_PASSPHRASE }}' }
+        run: |
+          set -euo pipefail
+          if [ -z "$PASS" ]; then echo '::warning::No BACKUP_PASSPHRASE secret yet, so nothing was copied off the server.'; echo SKIP=1 >> "$GITHUB_ENV"; exit 0; fi
+          $SSH "sudo tar -C /var/backups/novenique -czf - '$NEWEST'" | openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:PASS -out "$NEWEST.tar.gz.enc"
+          # prove it opens before keeping it
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass env:PASS -in "$NEWEST.tar.gz.enc" | tar -tzf - | grep -q "$NEWEST/MANIFEST.json"
+          ls -lh "$NEWEST.tar.gz.enc" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Keep for 30 days
+        if: env.SKIP != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NEWEST }}
+          path: ${{ env.NEWEST }}.tar.gz.enc
+          retention-days: 30
+          compression-level: 0

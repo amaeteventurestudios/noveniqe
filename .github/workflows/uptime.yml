@@ -1,0 +1,33 @@
+# Checks both games every 15 minutes. When one stops answering it opens an issue in this repo (GitHub emails you);
+# when it answers again it closes that issue. Free on a public repository.
+name: Uptime
+on:
+  schedule: [{ cron: '*/15 * * * *' }]
+  workflow_dispatch:
+permissions:
+  issues: write
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the sites
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SITES: ${{ vars.UPTIME_URLS || 'https://agentgrandprix.com/ https://palasora.com/api/v1/health' }}
+        run: |
+          down=''
+          for u in $SITES; do
+            ok=0
+            for i in 1 2 3; do curl -fsS -m 20 -o /dev/null "$u" && { ok=1; break; }; sleep 10; done
+            if [ $ok = 1 ]; then echo "up:   $u"; else echo "DOWN: $u"; down="$down $u"; fi
+          done
+          title='A site is down'
+          open=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number -q '.[0].number')
+          if [ -n "$down" ]; then
+            body="Not answering at $(date -u '+%Y-%m-%d %H:%M UTC'):$(printf '\n- %s' $down)"
+            if [ -n "$open" ]; then gh issue comment "$open" -R "$GITHUB_REPOSITORY" -b "$body"; else gh issue create -R "$GITHUB_REPOSITORY" -t "$title" -b "$body"; fi
+            exit 1
+          elif [ -n "$open" ]; then
+            gh issue close "$open" -R "$GITHUB_REPOSITORY" -c "All sites answer again at $(date -u '+%Y-%m-%d %H:%M UTC')."
+          fi

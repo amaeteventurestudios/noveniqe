@@ -1,0 +1,31 @@
+# How many Agent Grand Prix races can run at once at real time: runs the game's own race engine (ops/bench/race-bench.mjs)
+# on a GitHub ARM machine and, if you tick "on the server", on the shared server too (low priority, 20 seconds of work).
+# Press "Run workflow" to use it; it never runs by itself.
+name: Race capacity benchmark
+on:
+  workflow_dispatch:
+    inputs:
+      on_server: { description: 'Also run on the shared server', type: boolean, default: true }
+jobs:
+  bench:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/agent-grand-prix-, path: agp }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: On a GitHub ARM machine
+        run: node --expose-gc ops/bench/race-bench.mjs agp/js --seconds 20 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Connect
+        if: inputs.on_server
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: On the shared server
+        if: inputs.on_server
+        run: |
+          set -euo pipefail
+          $SCP ops/bench/race-bench.mjs "$DEST:/tmp/race-bench.mjs"
+          $SSH 'N=$(ls /opt/agp-node/bin/node /opt/palasora-node/bin/node 2>/dev/null | head -1); [ -n "$N" ] || { echo "No Node on the server"; exit 1; }
+            nice -n 19 timeout 300 "$N" --expose-gc /tmp/race-bench.mjs /opt/agent-grand-prix/js --seconds 20; rm -f /tmp/race-bench.mjs' | tee -a "$GITHUB_STEP_SUMMARY"
