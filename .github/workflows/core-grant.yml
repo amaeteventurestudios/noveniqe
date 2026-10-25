@@ -1,0 +1,24 @@
+# Gives someone a role in Novenique (or removes it). The person must have signed in once. Needed for the first Super
+# Administrator; after that, staff grant roles from the admin API, which checks every grant against the grantor's own roles.
+name: Grant a role
+on:
+  workflow_dispatch:
+    inputs:
+      who: { description: 'Email or @handle', required: true }
+      product: { description: 'platform (all of Novenique), agp or palasora', required: true, default: platform }
+      role: { description: 'super_admin, platform_admin, agp_admin, palasora_admin, moderator, player, or none to remove', required: true, default: super_admin }
+jobs:
+  grant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Grant
+        env: { WHO: '${{ inputs.who }}', PRODUCT: '${{ inputs.product }}', ROLE: '${{ inputs.role }}' }
+        run: |
+          set -euo pipefail
+          for v in "$WHO" "$PRODUCT" "$ROLE"; do [[ "$v" =~ ^[@A-Za-z0-9._+-]+$ ]] || { echo "::error::Unexpected characters in: $v"; exit 1; }; done
+          $SSH "cd /opt/novenique/core && sudo -u novenique /opt/novenique-node/bin/node tools/grant.mjs --env /etc/novenique/core.env $WHO $PRODUCT $ROLE" | tee -a "$GITHUB_STEP_SUMMARY"

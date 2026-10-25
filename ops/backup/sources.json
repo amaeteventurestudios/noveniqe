@@ -14,6 +14,10 @@
       "copy": ["/var/lib/private/agp", "/etc/agent-grand-prix.env"]
     },
     {
+      "name": "novenique-core",
+      "copy": ["/etc/novenique", "/etc/palasora-novenique.env"]
+    },
+    {
       "name": "web-server",
       "copy": ["/etc/caddy", "/var/lib/private/caddy"]
     }

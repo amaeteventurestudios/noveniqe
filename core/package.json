@@ -1,0 +1,8 @@
+{
+  "name": "novenique-core",
+  "private": true,
+  "type": "module",
+  "description": "One account for every Novenique game. No dependencies: Node 22 only.",
+  "engines": { "node": ">=22" },
+  "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs" }
+}
