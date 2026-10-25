@@ -29,11 +29,14 @@ export function makeCore(cfg, deps = {}) {
   const A = makeAccounts({ pb, cfg });
   const SESSION = cfg.secure ? '__Host-nv_session' : 'nv_session';
   const fetchImpl = deps.fetch ?? fetch;
+  // A sign-in form's answer can redirect on to a game (and to Google), and form-action covers redirects, so list them.
+  const formTargets = [...new Set([...Object.values(cfg.clients).flatMap((c) => c.redirect_uris.map((u) => new URL(u).origin)),
+    ...(cfg.google ? [new URL(cfg.google.authUrl).origin] : [])])].join(' ');
 
   // ---------- small response helpers ----------
   const send = (res, status, html, headers = {}) => {
     res.writeHead(status, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY',
-      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https:; frame-ancestors 'none'; base-uri 'none'", ...headers });
+      'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${formTargets}; frame-ancestors 'none'; base-uri 'none'`, ...headers });
     res.end(html);
   };
   const json = (res, status, obj) => { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(obj)); };
