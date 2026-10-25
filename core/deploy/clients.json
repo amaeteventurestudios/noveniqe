@@ -1,0 +1,16 @@
+{
+  "note": "The games that sign people in through Novenique. No secrets here: each secret is made on the server by deploy/install.sh.",
+  "clients": [
+    {
+      "id": "agp", "name": "Agent Grand Prix", "product": "agp", "guests": true, "color": "#E10600",
+      "home": "https://agentgrandprix.com",
+      "redirect_uris": ["https://agentgrandprix.com/auth/novenique/callback", "https://www.agentgrandprix.com/auth/novenique/callback"]
+    },
+    {
+      "id": "palasora", "name": "Palasora", "product": "palasora", "guests": false, "color": "#C34218",
+      "home": "https://palasora.com",
+      "redirect_uris": ["https://palasora.com/auth/novenique/callback", "https://www.palasora.com/auth/novenique/callback",
+        "https://palasora.129-146-26-28.sslip.io/auth/novenique/callback"]
+    }
+  ]
+}

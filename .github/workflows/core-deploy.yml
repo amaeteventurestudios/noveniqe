@@ -1,0 +1,56 @@
+# Puts Novenique Core (accounts for every Novenique game) on the shared server whenever core/ changes on main, after its
+# tests pass against PocketBase and Palasora's real database schema (core/deploy/install.sh).
+# Uses the same three secrets as the server safety deploy: SERVER_HOST, SERVER_USER, SERVER_SSH_KEY.
+# Optional secrets, each turns a sign-in method on (Core works with neither: players stay guests until one is set):
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET   "Continue with Google"
+#   RESEND_API_KEY (or BREVO_API_KEY)        6-digit email codes; MAIL_FROM optional, default "Novenique <accounts@novenique.com>"
+name: Accounts service (deploy)
+on:
+  push:
+    branches: [main]
+    paths: ['core/**', '.github/workflows/core-deploy.yml']
+  workflow_dispatch:
+concurrency: server-core
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/palasora, path: palasora, sparse-checkout: services/pocketbase/pb_migrations }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: PocketBase for the tests
+        run: |
+          curl -fsSL -o pb.zip https://github.com/pocketbase/pocketbase/releases/download/v0.40.5/pocketbase_0.40.5_linux_amd64.zip
+          unzip -oq pb.zip pocketbase -d /tmp && chmod +x /tmp/pocketbase
+      - name: Test
+        working-directory: core
+        run: PB_BIN=/tmp/pocketbase PB_MIGRATIONS=$GITHUB_WORKSPACE/palasora/services/pocketbase/pb_migrations npm test
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Install on the server
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+        run: |
+          set -euo pipefail
+          tar czf novenique-core.tgz --exclude='test' -C core .
+          install -m 600 /dev/null keys.env
+          for k in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RESEND_API_KEY BREVO_API_KEY MAIL_FROM; do printf '%s=%s\n' "$k" "$(printenv $k | tr -d '\r\n')" >> keys.env; done
+          $SCP novenique-core.tgz "$DEST:/tmp/"
+          $SCP keys.env "$DEST:/tmp/novenique-core-keys.env" && rm -f keys.env
+          HOST_IP=$($SSH 'curl -fsS -m 10 https://api.ipify.org || hostname -I | cut -d" " -f1')
+          $SSH "chmod 600 /tmp/novenique-core-keys.env; HOST_IP=$HOST_IP bash -s" < core/deploy/install.sh | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Answers from outside
+        run: |
+          set -euo pipefail
+          ip=$($SSH 'curl -fsS -m 10 https://api.ipify.org')
+          u="https://accounts.${ip//./-}.sslip.io/health"
+          for i in $(seq 1 30); do curl -fsS -m 10 "$u" && break; sleep 5; done
+          echo; echo "Spare address: $u" | tee -a "$GITHUB_STEP_SUMMARY"

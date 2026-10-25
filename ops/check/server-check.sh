@@ -23,7 +23,7 @@ echo
 echo '### Services (memory from systemd)'
 echo '| Service | State | Memory | Since |'
 echo '| --- | --- | --- | --- |'
-for s in caddy palasora-pb palasora-api palasora-worker palasora-web agent-grand-prix spacetimedb ollama docker; do
+for s in caddy palasora-pb palasora-api palasora-worker palasora-web novenique-core agent-grand-prix spacetimedb ollama docker; do
   st=$(systemctl is-active "$s" 2>/dev/null); [ -z "$st" ] && st=unknown
   [ "$st" = inactive ] && ! systemctl cat "$s" >/dev/null 2>&1 && continue
   mem=$(systemctl show "$s" -p MemoryCurrent --value 2>/dev/null); case "$mem" in ''|'[not set]'|infinity) mem='-' ;; *) mem="$((mem / 1048576)) MB" ;; esac
@@ -43,6 +43,7 @@ echo '| --- | --- |'
 row 'Caddy' "$(ver /usr/local/bin/caddy version || echo 'not found')"
 row 'PocketBase (Palasora)' "$(ver /usr/local/bin/palasora-pocketbase --version || echo 'not found')"
 row 'Node (Palasora)' "$(ver /opt/palasora-node/bin/node --version || echo 'not found')"
+row 'Node (Novenique Core)' "$(ver /opt/novenique-node/bin/node --version || echo 'not found')"
 row 'Node (Agent Grand Prix)' "$(ver /opt/agp-node/bin/node --version || echo 'not found')"
 row 'Python' "$(ver python3 --version)"
 row 'SpacetimeDB' "$( (have spacetime && ver spacetime --version) || (ls -d /opt/spacetime* /root/.local/bin/spacetime 2>/dev/null | head -1) || echo 'not installed')"
