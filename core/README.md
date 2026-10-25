@@ -35,6 +35,10 @@ Core keeps its data in the shared store, Palasora's PocketBase.
   of Palasora's tables.
 - Every action is written to Palasora's `audit_events`, tagged `source: novenique-core`.
 
+PocketBase normally writes a migration file whenever a table is created through its API. On the server it cannot (Palasora's
+code folder is read-only to the database), so nothing is written. For a local Palasora, start PocketBase with
+`--automigrate=false` before running Core against it.
+
 ## Run and test
 ```
 PB_BIN=/path/to/pocketbase-0.40.5 npm test --prefix core                  # 21 tests against a throwaway PocketBase

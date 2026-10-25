@@ -27,7 +27,7 @@ export async function start(overrides = {}) {
   execFileSync(pbBin, ['migrate', 'up', ...args], { stdio: 'ignore' });
   execFileSync(pbBin, ['superuser', 'upsert', 'core@test.local', 'core-test-password', `--dir=${dir}`], { stdio: 'ignore' });
   const port = await freePort();
-  const proc = spawn(pbBin, ['serve', ...args, `--http=127.0.0.1:${port}`], { stdio: 'ignore' });
+  const proc = spawn(pbBin, ['serve', ...args, '--automigrate=false', `--http=127.0.0.1:${port}`], { stdio: 'ignore' });
   const pbUrl = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) { try { if ((await fetch(`${pbUrl}/api/health`)).ok) break; } catch { /* starting */ } await new Promise((r) => setTimeout(r, 100)); }
   const corePort = await freePort();
