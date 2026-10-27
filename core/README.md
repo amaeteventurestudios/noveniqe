@@ -15,6 +15,14 @@ session cookie. Plain Node 22 with no dependencies.
   - A new email or Google account is added to the same user id.
   - An email or Google account that already has an account merges the guest into it. This only happens after the
     player says yes. The game learns of the merge from `merged_from` and `GET /v1/merges`.
+- **Signing in on the game's own screen.** A game can keep sign-in on its own page, so players never see Novenique.
+  - Email: the game's server calls `POST /v1/signin/email/start {email, ip}` and then `/v1/signin/email/verify {email, code, guest_token?}`.
+  - Google: the game sends the player to `/authorize?...&via=google`, which goes straight to Google. With `google_redirect` set in
+    `deploy/clients.json`, Google returns to the game's own address, and the game forwards the request to `/google/callback` unchanged.
+  - Every answer carries a `ticket` (signed, 30 minutes, that game only). `needs_profile` means the game asks for a name and
+    @handle, then calls `/v1/signin/profile {ticket, display_name, handle}`.
+  - `merge_needed` (or `merge` and `who` on the Google return) means the game asks before a guest's progress moves into an
+    existing account, then calls `/v1/signin/merge {ticket, choice: 'merge'}`.
 - **Names.** Each person has a name and an @handle. Handles are unique across Novenique. Brand names and staff words are
   reserved, including look-alikes. A handle can change once every 30 days, and the old one is held for its owner for
   30 days.

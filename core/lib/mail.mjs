@@ -4,9 +4,9 @@ import { appendFileSync } from 'node:fs';
 
 export async function sendCode(mail, to, code, brand) {
   const subject = `${code} is your ${brand} sign-in code`;
-  const text = `Your sign-in code for ${brand} is ${code}.\n\nIt works for 10 minutes. If you did not ask for it, ignore this email: nobody can sign in without the code.\n\nNovenique accounts`;
+  const text = `Your sign-in code for ${brand} is ${code}.\n\nIt works for 10 minutes. If you did not ask for it, ignore this email: nobody can sign in without the code.\n\n${brand}`;
   const html = `<p>Your sign-in code for ${brand} is</p><p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p>`
-    + '<p>It works for 10 minutes. If you did not ask for it, ignore this email: nobody can sign in without the code.</p><p>Novenique accounts</p>';
+    + '<p>It works for 10 minutes. If you did not ask for it, ignore this email: nobody can sign in without the code.</p>' + `<p>${brand}</p>`;
   if (mail.provider === 'sink') {
     if (mail.sinkFile) appendFileSync(mail.sinkFile, JSON.stringify({ to, subject, code, at: new Date().toISOString() }) + '\n');
     mail.last = { to, code };
