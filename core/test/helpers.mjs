@@ -14,7 +14,7 @@ const bin = () => [process.env.PB_BIN, './pocketbase', '/tmp/pocketbase'].find((
 
 export const SECRETS = { agp: 'agp-test-secret-0123456789', palasora: 'palasora-test-secret-0123456789' };
 export const CLIENTS = {
-  agp: { id: 'agp', name: 'Agent Grand Prix', product: 'agp', guests: true, color: '#E10600', home: 'https://agp.test', redirect_uris: ['https://agp.test/cb'], secretHash: sha(SECRETS.agp) },
+  agp: { id: 'agp', name: 'Agent Grand Prix', product: 'agp', guests: true, color: '#E10600', home: 'https://agp.test', google_redirect: 'https://agp.test/auth/google/callback', redirect_uris: ['https://agp.test/cb'], secretHash: sha(SECRETS.agp) },
   palasora: { id: 'palasora', name: 'Palasora', product: 'palasora', guests: false, color: '#C34218', home: 'https://palasora.test', redirect_uris: ['https://palasora.test/cb'], secretHash: sha(SECRETS.palasora) },
 };
 

@@ -86,7 +86,7 @@ export function makeCore(cfg, deps = {}) {
     const user = userId ? await A.active(userId) : (await session(req))?.user;
     if (!user) return go(res, '/signin');
     const client = clientOf(f);
-    if (A.needsProfile(user)) { writeFlow(res, f); return go(res, '/profile'); }
+    if (A.needsProfile(user) && !f.via) { writeFlow(res, f); return go(res, '/profile'); }
     if (client === SELF) { clearFlow(res); return go(res, f.next && f.next.startsWith('/') && !f.next.startsWith('//') ? f.next : '/account'); }
     const code = token(32);
     await pb.create('nv_codes', { code_hash: sha(code), client_id: client.id, redirect_uri: f.r, challenge: f.ch, user_id: user.id,
@@ -107,6 +107,15 @@ export function makeCore(cfg, deps = {}) {
     const guestId = f.g ?? null;
     if (guestId && userId && userId !== guestId) {
       await A.attach(userId, provider, subject, email);
+      if (f.via) {
+        // signing in on the game's own screen: the game asks the merge question itself, then calls /v1/signin/merge
+        const u0 = await A.active(userId), back = new URL(f.r);
+        clearFlow(res);
+        back.searchParams.set('merge', ticketFor(clientOf(f), { u: userId, pm: guestId }));
+        back.searchParams.set('who', u0?.handle ? '@' + u0.handle : maskEmail(email || u0?.email || ''));
+        if (f.s) back.searchParams.set('state', f.s);
+        return go(res, back.toString());
+      }
       await startSession(req, res, userId);
       writeFlow(res, { ...f, pm: guestId });
       return go(res, '/merge');
@@ -142,6 +151,11 @@ export function makeCore(cfg, deps = {}) {
       const g = await A.account(li.guest_user_id);
       if (!g || g.kind !== 'guest' || g.merged_into) return back('invalid_request');
       Object.assign(f, { g: li.guest_user_id, li: li.id });
+    }
+    // a game with its own sign-in screen: the player picked Google there, so go straight to Google (no Core page)
+    if (p.get('via') === 'google') {
+      if (!cfg.google) return back('temporarily_unavailable');
+      return googleStart(req, res, { ...f, via: 'google' });
     }
     writeFlow(res, f);
     const s = await session(req);
@@ -189,35 +203,43 @@ export function makeCore(cfg, deps = {}) {
     return signedIn(req, res, { ...f, e: undefined }, { provider: 'email', subject: f.e, email: f.e });
   }
 
-  async function googleStart(req, res) {
-    const f = readFlow(req);
+  async function googleStart(req, res, given = null) {
+    const f = given ?? readFlow(req);
     if (!f) return signinPage(req, res, null);
     if (!cfg.google) return signinPage(req, res, f, 'Google sign-in is not available right now.', 400);
     const gs = token(16), gn = token(16);
-    writeFlow(res, { ...f, gs, gn });
+    // a game may have Google return to its own address (it forwards straight here), so players only ever see the game's name
+    const gr = clientOf(f)?.google_redirect || `${cfg.publicUrl}/google/callback`;
+    writeFlow(res, { ...f, gs, gn, gr });
     const u = new URL(cfg.google.authUrl);
-    for (const [k, v] of Object.entries({ client_id: cfg.google.id, redirect_uri: `${cfg.publicUrl}/google/callback`, response_type: 'code', scope: 'openid email profile',
+    for (const [k, v] of Object.entries({ client_id: cfg.google.id, redirect_uri: gr, response_type: 'code', scope: 'openid email profile',
       state: gs, nonce: gn, prompt: 'select_account' })) u.searchParams.set(k, v);
     return go(res, u.toString());
   }
 
   async function googleCallback(req, res, url) {
     const f = readFlow(req);
+    if (f?.via && (!f.gs || !same(url.searchParams.get('state') ?? '', f.gs) || url.searchParams.get('error') || !url.searchParams.get('code'))) {
+      clearFlow(res);
+      const u = new URL(f.r); u.searchParams.set('error', url.searchParams.get('error') ? 'access_denied' : 'invalid_request'); if (f.s) u.searchParams.set('state', f.s);
+      return go(res, u.toString());
+    }
     if (!f || !f.gs || !same(url.searchParams.get('state') ?? '', f.gs)) return signinPage(req, res, f, 'Google sign-in expired. Please try again.', 400);
     if (url.searchParams.get('error') || !url.searchParams.get('code')) return signinPage(req, res, f, 'Google sign-in was cancelled.');
     // The ID token comes straight from Google's token endpoint over TLS, so its claims are checked rather than its signature
     // (OpenID Connect Core 3.1.3.7, item 6).
     const r = await fetchImpl(cfg.google.tokenUrl, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ code: url.searchParams.get('code'), client_id: cfg.google.id, client_secret: cfg.google.secret,
-        redirect_uri: `${cfg.publicUrl}/google/callback`, grant_type: 'authorization_code' }), signal: AbortSignal.timeout(10_000) }).catch(() => null);
+        redirect_uri: f.gr || `${cfg.publicUrl}/google/callback`, grant_type: 'authorization_code' }), signal: AbortSignal.timeout(10_000) }).catch(() => null);
     const tok = r?.ok ? await r.json().catch(() => null) : null;
     let c = null;
     try { c = JSON.parse(Buffer.from(String(tok?.id_token ?? '').split('.')[1] ?? '', 'base64url').toString()); } catch { /* bad token */ }
     const ok = c && ['accounts.google.com', 'https://accounts.google.com'].includes(c.iss) && (c.aud === cfg.google.id || (Array.isArray(c.aud) && c.aud.includes(cfg.google.id)))
       && c.exp * 1000 > Date.now() && c.nonce === f.gn && c.sub;
+    if (!ok && f.via) { clearFlow(res); const u = new URL(f.r); u.searchParams.set('error', 'invalid_request'); if (f.s) u.searchParams.set('state', f.s); return go(res, u.toString()); }
     if (!ok) return signinPage(req, res, f, 'Google sign-in did not work. Please try again.', 400);
     const email = c.email_verified === true || c.email_verified === 'true' ? String(c.email ?? '').toLowerCase() : '';
-    return signedIn(req, res, { ...f, gs: undefined, gn: undefined }, { provider: 'google', subject: String(c.sub), email, name: String(c.name ?? '').slice(0, 40) });
+    return signedIn(req, res, { ...f, gs: undefined, gn: undefined, gr: undefined }, { provider: 'google', subject: String(c.sub), email, name: String(c.name ?? '').slice(0, 40) });
   }
 
   async function merge(req, res, form) {
@@ -260,7 +282,79 @@ export function makeCore(cfg, deps = {}) {
     if (!/^[A-Za-z0-9._~-]{43,128}$/.test(String(form.code_verifier ?? '')) || !same(challengeOf(form.code_verifier), row.challenge)) return bad();
     const u = await A.active(row.user_id);
     if (!u) return bad();
-    return json(res, 200, { user: A.publicView(u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: row.merged_from ?? [] });
+    return json(res, 200, { user: A.publicView(u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: row.merged_from ?? [],
+      needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id }) });
+  }
+
+  // ---------- signing in on the game's own screen ----------
+  // A game can keep the whole sign-in on its own page: its server calls these with its client secret, passing what the
+  // player typed. Nothing here sets a cookie; the game keeps its own session. A ticket (signed, 30 minutes, this game only)
+  // carries a half-finished sign-in to the next step: the player's name and @handle, or the yes before merging a guest.
+  const ticketFor = (client, t) => sign({ ...t, c: client.id, exp: Date.now() + FLOW_MINUTES * 60_000 }, cfg.key);
+  const ticketOf = (client, raw) => { const t = unsign(String(raw ?? ''), cfg.key); return t && t.c === client.id && t.exp > Date.now() ? t : null; };
+  async function signedInHere(client, { provider, subject, email, name }, guestId) {
+    const ident = await A.identity(provider, subject);
+    let userId = ident ? await A.resolve(ident.user_id) : null;
+    if (userId && !(await A.active(userId))) return { status: 403, body: { error: { code: 'CLOSED', message: 'This account is closed' } } };
+    if (!userId && email) userId = (await A.byEmail(email))?.id ?? null;
+    if (guestId && userId && userId !== guestId) {
+      // this email already has an account: the player says yes before the guest's progress moves into it
+      await A.attach(userId, provider, subject, email);
+      const u = await A.active(userId);
+      return { status: 200, body: { merge_needed: true, who: u?.handle ? '@' + u.handle : maskEmail(email || u?.email || ''), ticket: ticketFor(client, { u: userId, pm: guestId }) } };
+    }
+    if (guestId && !userId) { await A.attach(guestId, provider, subject, email); await A.upgrade(guestId, { email }); userId = guestId; }
+    if (!userId) userId = (await A.createMember({ email, name, clientId: client.id })).id;
+    await A.attach(userId, provider, subject, email);
+    await A.audit(userId, 'auth.sign_in', userId, { provider, client: client.id, here: true });
+    return doneHere(client, userId, []);
+  }
+  async function doneHere(client, userId, mergedFrom) {
+    const u = await A.active(userId);
+    if (!u) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Unknown user' } } };
+    return { status: 200, body: { user: A.publicView(u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: mergedFrom,
+      needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id, mf: mergedFrom }) } };
+  }
+  async function hereApi(req, res, client, path, form) {
+    const out = (r) => json(res, r.status, r.body), ip = String(form.ip ?? '');
+    if (path === '/v1/signin/email/start') {
+      if (!cfg.mail.on) return fail(res, 503, 'UNAVAILABLE', 'Email sign-in is not available right now');
+      const email = String(form.email ?? '').trim().toLowerCase();
+      if (!EMAIL_RE.test(email) || email.endsWith('.invalid')) return fail(res, 400, 'BAD_EMAIL', 'Enter a valid email address');
+      if (limited(`mail:ip:${ip}`, 10, 600_000) || limited(`mail:to:${email}`, 5, 3_600_000)) return fail(res, 429, 'RATE_LIMITED', 'Too many codes asked for. Please wait a few minutes');
+      const code = sixDigits();
+      await pb.create('nv_email_codes', { email, code_hash: sha(cfg.key.toString('hex') + email + code), attempts: 0, expires_at: pbDate(new Date(Date.now() + 10 * 60_000)) });
+      if (!(await sendCode(cfg.mail, email, code, client.name).catch(() => false))) return fail(res, 502, 'MAIL_FAILED', 'We could not send the email. Please try again');
+      return json(res, 200, { masked: maskEmail(email) });
+    }
+    if (path === '/v1/signin/email/verify') {
+      const email = String(form.email ?? '').trim().toLowerCase(), code = String(form.code ?? '').replace(/\D/g, '');
+      if (limited(`verify:ip:${ip}`, 30, 600_000)) return fail(res, 429, 'RATE_LIMITED', 'Too many tries. Please wait a few minutes');
+      const row = EMAIL_RE.test(email) ? await pb.first('nv_email_codes', `email=${q(email)} && used_at='' && expires_at>${q(pbDate())}`, '-created') : null;
+      if (!row || row.attempts >= 5) return fail(res, 400, 'EXPIRED', 'That code has expired. Ask for a new one');
+      if (!same(row.code_hash, sha(cfg.key.toString('hex') + email + code))) {
+        await pb.update('nv_email_codes', row.id, { attempts: row.attempts + 1 });
+        return fail(res, 400, 'WRONG_CODE', row.attempts + 1 >= 5 ? 'Too many wrong codes. Ask for a new one' : 'That code is not right. Check the email and try again');
+      }
+      await pb.update('nv_email_codes', row.id, { used_at: pbDate() });
+      const g = form.guest_token ? await A.guestByToken(String(form.guest_token)) : null;
+      return out(await signedInHere(client, { provider: 'email', subject: email, email }, g && g.kind === 'guest' && !g.merged_into ? g.user_id : null));
+    }
+    if (path === '/v1/signin/merge') {
+      const t = ticketOf(client, form.ticket);
+      if (!t || !t.pm) return fail(res, 400, 'EXPIRED', 'That sign-in expired. Please start again');
+      if (form.choice !== 'merge') return json(res, 200, { merged: false });
+      await A.merge(t.pm, t.u, client.id);
+      return out(await doneHere(client, t.u, [t.pm]));
+    }
+    if (path === '/v1/signin/profile') {
+      const t = ticketOf(client, form.ticket), u = t && !t.pm ? await A.active(t.u) : null;
+      if (!u) return fail(res, 400, 'EXPIRED', 'That sign-in expired. Please start again');
+      const error = await A.setProfile(u, form);
+      if (error) return fail(res, 400, 'BAD_PROFILE', error);
+      return out(await doneHere(client, u.id, t.mf ?? []));
+    }
+    return fail(res, 404, 'NOT_FOUND', 'No such endpoint');
   }
   const rolesFor = async (userId, client) => (await A.roles(userId)).filter((r) => r.product === 'platform' || r.product === client.product).map((r) => ({ product: r.product, role: r.role }));
 
@@ -269,6 +363,7 @@ export function makeCore(cfg, deps = {}) {
     const client = clientAuth(req, form);
     if (!client) return fail(res, 401, 'UNAUTHENTICATED', 'Send the game\'s client id and secret');
     const path = url.pathname;
+    if (req.method === 'POST' && path.startsWith('/v1/signin/')) return hereApi(req, res, client, path, form);
     if (req.method === 'POST' && path === '/v1/guests') {
       if (!client.guests) return fail(res, 403, 'FORBIDDEN', 'This game does not make guests');
       if (limited(`guest:${client.id}:${String(form.ip ?? '')}`, 30, 3_600_000)) return fail(res, 429, 'RATE_LIMITED', 'Too many guests from one address');
