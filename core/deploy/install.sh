@@ -50,10 +50,11 @@ NAMES=("$SPARE")
 [ "$(getent ahostsv4 "$MAIN_DNS" 2>/dev/null | awk 'NR==1{print $1}')" = "$HOST_IP" ] && NAMES=("$MAIN_DNS" "$SPARE")
 setkv CORE_PUBLIC_URL "https://${NAMES[0]}"
 if [ -f /tmp/novenique-core-keys.env ]; then
-  while IFS='=' read -r k v; do [ -n "$v" ] && setkv "$k" "$v"; done < <(grep -E '^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|RESEND_API_KEY|BREVO_API_KEY|MAIL_FROM)=' /tmp/novenique-core-keys.env || true)
+  while IFS='=' read -r k v; do [ -n "$v" ] && setkv "$k" "$v"; done < <(grep -E '^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|RESEND_API_KEY|BREVO_API_KEY|MAIL_FROM|SMTP_HOST|SMTP_PORT|SMTP_USER|SMTP_PASS)=' /tmp/novenique-core-keys.env || true)
   rm -f /tmp/novenique-core-keys.env
 fi
-if sudo grep -q '^RESEND_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER resend; elif sudo grep -q '^BREVO_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER brevo; fi
+if sudo grep -q '^SMTP_PASS=.' "$ENVF" && sudo grep -q '^SMTP_HOST=.' "$ENVF"; then setkv MAIL_PROVIDER smtp
+elif sudo grep -q '^RESEND_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER resend; elif sudo grep -q '^BREVO_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER brevo; fi
 
 # One secret per game. Core reads every file here; each game gets its own copy, readable only by that game's service.
 for id in $(python3 -c "import json;print(' '.join(c['id'] for c in json.load(open('$APP/deploy/clients.json'))['clients']))"); do

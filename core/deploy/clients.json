@@ -3,7 +3,7 @@
   "clients": [
     {
       "id": "agp", "name": "Agent Grand Prix", "product": "agp", "guests": true, "color": "#E10600",
-      "home": "https://agentgrandprix.com", "google_redirect": "https://agentgrandprix.com/auth/google/callback",
+      "home": "https://agentgrandprix.com", "from": "Agent Grand Prix <no-reply@agentgrandprix.com>", "google_redirect": "https://agentgrandprix.com/auth/google/callback",
       "redirect_uris": ["https://agentgrandprix.com/auth/novenique/callback", "https://www.agentgrandprix.com/auth/novenique/callback"]
     },
     {

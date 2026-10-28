@@ -181,7 +181,7 @@ export function makeCore(cfg, deps = {}) {
       return signinPage(req, res, { ...f, e: email }, 'Too many codes asked for. Please wait a few minutes.', 429);
     const code = sixDigits();
     await pb.create('nv_email_codes', { email, code_hash: sha(cfg.key.toString('hex') + email + code), attempts: 0, expires_at: pbDate(new Date(Date.now() + 10 * 60_000)) });
-    const ok = await sendCode(cfg.mail, email, code, clientOf(f).name).catch(() => false);
+    const ok = await sendCode(cfg.mail, email, code, clientOf(f).name, clientOf(f).from).catch(() => false);
     if (!ok) return signinPage(req, res, { ...f, e: email }, 'We could not send the email. Please try again.', 502);
     writeFlow(res, { ...f, e: email });
     return send(res, 200, P.codeEntry({ client: clientOf(f), csrf: f.x, masked: maskEmail(email) }));
@@ -324,7 +324,7 @@ export function makeCore(cfg, deps = {}) {
       if (limited(`mail:ip:${ip}`, 10, 600_000) || limited(`mail:to:${email}`, 5, 3_600_000)) return fail(res, 429, 'RATE_LIMITED', 'Too many codes asked for. Please wait a few minutes');
       const code = sixDigits();
       await pb.create('nv_email_codes', { email, code_hash: sha(cfg.key.toString('hex') + email + code), attempts: 0, expires_at: pbDate(new Date(Date.now() + 10 * 60_000)) });
-      if (!(await sendCode(cfg.mail, email, code, client.name).catch(() => false))) return fail(res, 502, 'MAIL_FAILED', 'We could not send the email. Please try again');
+      if (!(await sendCode(cfg.mail, email, code, client.name, client.from).catch(() => false))) return fail(res, 502, 'MAIL_FAILED', 'We could not send the email. Please try again');
       return json(res, 200, { masked: maskEmail(email) });
     }
     if (path === '/v1/signin/email/verify') {
