@@ -293,7 +293,7 @@ test('sign out everywhere ends every accounts-site session', async () => {
 test('health', async () => {
   const r = await fetch(t.base + '/health');
   assert.equal(r.status, 200);
-  assert.deepEqual(await r.json(), { ok: true, google: true, email: true });
+  assert.deepEqual(await r.json(), { ok: true, google: true, email: true, pay: { stripe: false, selling: [] } });
 });
 
 void SECRETS;

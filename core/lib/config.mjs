@@ -33,6 +33,9 @@ export function loadConfig(env = process.env, overrides = {}) {
     mail: { provider: mailProvider, from: env.MAIL_FROM || (env.SMTP_USER ? env.SMTP_USER : 'Novenique <accounts@novenique.com>'), resendKey: env.RESEND_API_KEY ?? '', brevoKey: env.BREVO_API_KEY ?? '',
       sinkFile: env.MAIL_SINK_FILE ?? '',
       smtp: { host: env.SMTP_HOST ?? '', port: Number(env.SMTP_PORT || 465), user: env.SMTP_USER ?? '', pass: env.SMTP_PASS ?? '' } },
+    // payments: one Stripe account for every game (lib/billing.mjs); STRIPE_PRICE_<PRODUCT>_<PLAN> overrides a plan's Price ID
+    stripe: { key: env.STRIPE_SECRET_KEY ?? '', hook: env.STRIPE_WEBHOOK_SECRET ?? '',
+      prices: Object.fromEntries(Object.entries(env).filter(([k, v]) => /^STRIPE_PRICE_[A-Z0-9]+_[A-Z]+$/.test(k) && v).map(([k, v]) => [k.slice(13).toLowerCase().replace('_', '.'), v])) },
     staffMfa: mode === 'production' || !['0', 'false', 'no', 'off'].includes(String(env.STAFF_MFA_REQUIRED ?? 'true').toLowerCase()),
     trustProxy: on(env.CORE_TRUST_PROXY ?? (mode === 'production' ? 'true' : 'false')),
     ...overrides,

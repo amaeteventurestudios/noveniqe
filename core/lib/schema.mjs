@@ -5,6 +5,7 @@ const T = (name, o = {}) => ({ name, type: 'text', max: 500, ...o });
 const D = (name) => ({ name, type: 'date' });
 const N = (name) => ({ name, type: 'number' });
 const J = (name) => ({ name, type: 'json', maxSize: 20000 });
+const B = (name) => ({ name, type: 'bool' });
 const S = (name, values) => ({ name, type: 'select', values, maxSelect: 1 });
 const STAMPS = [{ name: 'created', type: 'autodate', onCreate: true }, { name: 'updated', type: 'autodate', onCreate: true, onUpdate: true }];
 
@@ -37,6 +38,13 @@ export const TABLES = {
     ['CREATE UNIQUE INDEX idx_nv_merges ON nv_merges (from_user)']],
   // a handle someone gave up stays theirs for 30 days, so nobody can take it to pose as them
   nv_handle_holds: [[T('handle', { required: true, max: 40 }), T('user_id', { max: 40 }), D('until')], ['CREATE INDEX idx_nv_handle_holds ON nv_handle_holds (handle)']],
+  // the pass each person holds in each game (a Stripe subscription; lib/billing.mjs); times in milliseconds
+  nv_passes: [[T('user_id', { required: true, max: 40 }), T('product', { required: true, max: 40 }), T('plan', { max: 20 }), T('sub', { max: 80 }), T('customer', { max: 80 }),
+    N('since_ms'), N('until_ms'), B('renews'), N('paid'), T('source', { max: 20 })],
+    ['CREATE UNIQUE INDEX idx_nv_passes ON nv_passes (user_id, product)', 'CREATE INDEX idx_nv_passes_sub ON nv_passes (sub)']],
+  // every Stripe event already used, so a retried webhook changes nothing
+  nv_stripe_events: [[T('event_id', { required: true, max: 120 }), T('type', { max: 60 }), T('product', { max: 40 }), T('user_id', { max: 40 })],
+    ['CREATE UNIQUE INDEX idx_nv_stripe_events ON nv_stripe_events (event_id)']],
 };
 
 export async function ensureSchema(pb) {

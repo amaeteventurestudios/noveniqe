@@ -6,6 +6,7 @@
 #   SMTP_PASS                                6-digit email codes from our own mailbox (no-reply@agentgrandprix.com on the web
 #                                            hosting; host, port and user below are not secrets, SMTP_HOST/PORT/USER secrets override)
 #   RESEND_API_KEY (or BREVO_API_KEY)        email codes through Resend or Brevo instead; MAIL_FROM optional
+#   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET the pass in every game (without them Core uses Agent Grand Prix's, already on the server)
 name: Accounts service (deploy)
 on:
   push:
@@ -44,12 +45,14 @@ jobs:
           SMTP_PORT: ${{ secrets.SMTP_PORT || '465' }}
           SMTP_USER: ${{ secrets.SMTP_USER || 'no-reply@agentgrandprix.com' }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
         run: |
           set -euo pipefail
           tar czf novenique-core.tgz --exclude='test' -C core .
           install -m 600 /dev/null keys.env
           [ -n "$SMTP_PASS" ] || unset SMTP_HOST SMTP_PORT SMTP_USER
-          for k in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RESEND_API_KEY BREVO_API_KEY MAIL_FROM SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS; do printf '%s=%s\n' "$k" "$(printenv $k | tr -d '\r\n')" >> keys.env; done
+          for k in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RESEND_API_KEY BREVO_API_KEY MAIL_FROM SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET; do printf '%s=%s\n' "$k" "$(printenv $k | tr -d '\r\n')" >> keys.env; done
           $SCP novenique-core.tgz "$DEST:/tmp/"
           $SCP keys.env "$DEST:/tmp/novenique-core-keys.env" && rm -f keys.env
           HOST_IP=$($SSH 'curl -fsS -m 10 https://api.ipify.org || hostname -I | cut -d" " -f1')
