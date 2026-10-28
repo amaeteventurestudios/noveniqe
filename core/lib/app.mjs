@@ -364,6 +364,26 @@ export function makeCore(cfg, deps = {}) {
     if (!client) return fail(res, 401, 'UNAUTHENTICATED', 'Send the game\'s client id and secret');
     const path = url.pathname;
     if (req.method === 'POST' && path.startsWith('/v1/signin/')) return hereApi(req, res, client, path, form);
+    // the game's own signed-up players with their emails, for its owner's screen (the game's server only, never a browser)
+    if (req.method === 'GET' && path === '/v1/players') {
+      const accts = [];
+      for (let page = 1; page <= 50; page++) {
+        const b = await pb.list('nv_accounts', { filter: `created_by_client=${q(client.id)} && kind='member'`, sort: '-created', perPage: 200, page });
+        accts.push(...b); if (b.length < 200) break;
+      }
+      const players = [];
+      for (let i = 0; i < accts.length; i += 40) {
+        const ids = accts.slice(i, i + 40).map((a) => a.user_id), any = (k) => ids.map((id) => `${k}=${q(id)}`).join(' || ');
+        const users = new Map((await pb.list('users', { filter: `(${any('id')}) && account_status!='deleted'`, perPage: 40, fields: 'id,email,display_name,handle,created' })).map((u) => [u.id, u]));
+        const via = {};
+        for (const m of await pb.list('nv_identities', { filter: any('user_id'), perPage: 200, fields: 'user_id,provider' })) (via[m.user_id] ??= []).push(m.provider);
+        for (const a of accts.slice(i, i + 40)) {
+          const u = users.get(a.user_id); if (!u) continue;
+          players.push({ id: u.id, name: u.display_name || '', handle: u.handle || '', email: u.email, via: [...new Set(via[u.id] ?? [])], joined: a.created });
+        }
+      }
+      return json(res, 200, { players });
+    }
     if (req.method === 'POST' && path === '/v1/guests') {
       if (!client.guests) return fail(res, 403, 'FORBIDDEN', 'This game does not make guests');
       if (limited(`guest:${client.id}:${String(form.ip ?? '')}`, 30, 3_600_000)) return fail(res, 429, 'RATE_LIMITED', 'Too many guests from one address');
