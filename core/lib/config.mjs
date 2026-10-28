@@ -20,7 +20,7 @@ export function loadConfig(env = process.env, overrides = {}) {
   const key = Buffer.from(/^[0-9a-f]{64}$/i.test(secret) ? secret : sha('novenique-core-development-only'), 'hex');
   const publicUrl = (env.CORE_PUBLIC_URL ?? 'http://127.0.0.1:8200').replace(/\/$/, '');
   const clients = overrides.clients ?? readClients(env);
-  const mailProvider = env.MAIL_PROVIDER ?? (mode === 'production' ? 'off' : 'sink');
+  const mailProvider = env.MAIL_PROVIDER || (env.SMTP_HOST ? 'smtp' : env.RESEND_API_KEY ? 'resend' : env.BREVO_API_KEY ? 'brevo' : mode === 'production' ? 'off' : 'sink');
   const cfg = {
     mode, key, publicUrl, secure: publicUrl.startsWith('https://'),
     port: Number(env.CORE_PORT ?? 8200), host: env.CORE_HOST ?? '127.0.0.1',
@@ -30,13 +30,14 @@ export function loadConfig(env = process.env, overrides = {}) {
     clients,
     google: env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? { id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET,
       authUrl: env.GOOGLE_AUTH_URL ?? 'https://accounts.google.com/o/oauth2/v2/auth', tokenUrl: env.GOOGLE_TOKEN_URL ?? 'https://oauth2.googleapis.com/token' } : null,
-    mail: { provider: mailProvider, from: env.MAIL_FROM ?? 'Novenique <accounts@novenique.com>', resendKey: env.RESEND_API_KEY ?? '', brevoKey: env.BREVO_API_KEY ?? '',
-      sinkFile: env.MAIL_SINK_FILE ?? '' },
+    mail: { provider: mailProvider, from: env.MAIL_FROM || (env.SMTP_USER ? env.SMTP_USER : 'Novenique <accounts@novenique.com>'), resendKey: env.RESEND_API_KEY ?? '', brevoKey: env.BREVO_API_KEY ?? '',
+      sinkFile: env.MAIL_SINK_FILE ?? '',
+      smtp: { host: env.SMTP_HOST ?? '', port: Number(env.SMTP_PORT || 465), user: env.SMTP_USER ?? '', pass: env.SMTP_PASS ?? '' } },
     staffMfa: mode === 'production' || !['0', 'false', 'no', 'off'].includes(String(env.STAFF_MFA_REQUIRED ?? 'true').toLowerCase()),
     trustProxy: on(env.CORE_TRUST_PROXY ?? (mode === 'production' ? 'true' : 'false')),
     ...overrides,
   };
-  cfg.mail.on = (cfg.mail.provider === 'resend' && !!cfg.mail.resendKey) || (cfg.mail.provider === 'brevo' && !!cfg.mail.brevoKey) || cfg.mail.provider === 'sink';
+  cfg.mail.on = (cfg.mail.provider === 'smtp' && !!cfg.mail.smtp.host) || (cfg.mail.provider === 'resend' && !!cfg.mail.resendKey) || (cfg.mail.provider === 'brevo' && !!cfg.mail.brevoKey) || cfg.mail.provider === 'sink';
   return cfg;
 }
 
