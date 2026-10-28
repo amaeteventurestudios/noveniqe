@@ -110,3 +110,21 @@ test('Google from the game, as a guest whose email has an account: the game asks
   assert.equal(yes.body.user.id, member.id);
   assert.deepEqual(yes.body.merged_from, [g.body.user.id]);
 });
+
+test('the game can list its own signed-up players, with emails; another game sees none of them', async () => {
+  resetLimits();
+  const email = `pat.${uniq()}@example.com`;
+  await agp('/v1/signin/email/start', { email });
+  const v = await agp('/v1/signin/email/verify', { email, code: t.cfg.mail.last.code });
+  await agp('/v1/signin/profile', { ticket: v.body.ticket, display_name: 'Pat', handle: 'pat_' + uniq() });
+  await agp('/v1/guests', {});
+  const r = await api(t, CLIENTS.agp, 'GET', '/v1/players');
+  assert.equal(r.status, 200);
+  const me = r.body.players.find((p) => p.email === email);
+  assert.ok(me, 'the new player is listed');
+  assert.equal(me.name, 'Pat');
+  assert.ok(r.body.players.every((p) => !p.email.endsWith('.invalid')), 'no guests');
+  const other = await api(t, CLIENTS.palasora, 'GET', '/v1/players');
+  assert.ok(!other.body.players.some((p) => p.email === email));
+  assert.equal((await fetch(t.base + '/v1/players')).status, 401);
+});
