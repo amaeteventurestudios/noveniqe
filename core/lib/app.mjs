@@ -14,6 +14,7 @@ import { createServer } from 'node:http';
 import { makePB, q, pbDate, fromPb } from './pb.mjs';
 import { ensureSchema } from './schema.mjs';
 import { makeAccounts } from './accounts.mjs';
+import { makeBilling } from './billing.mjs';
 import { sendCode } from './mail.mjs';
 import * as P from './pages.mjs';
 import * as totp from './totp.mjs';
@@ -29,6 +30,7 @@ export function makeCore(cfg, deps = {}) {
   const A = makeAccounts({ pb, cfg });
   const SESSION = cfg.secure ? '__Host-nv_session' : 'nv_session';
   const fetchImpl = deps.fetch ?? fetch;
+  const B = makeBilling({ cfg, pb, A, fetchImpl: deps.stripeFetch ?? fetchImpl });
   // A sign-in form's answer can redirect on to a game (and to Google), and form-action covers redirects, so list them.
   const formTargets = [...new Set([...Object.values(cfg.clients).flatMap((c) => c.redirect_uris.map((u) => new URL(u).origin)),
     ...(cfg.google ? [new URL(cfg.google.authUrl).origin] : [])])].join(' ');
@@ -364,6 +366,7 @@ export function makeCore(cfg, deps = {}) {
     if (!client) return fail(res, 401, 'UNAUTHENTICATED', 'Send the game\'s client id and secret');
     const path = url.pathname;
     if (req.method === 'POST' && path.startsWith('/v1/signin/')) return hereApi(req, res, client, path, form);
+    if (path.startsWith('/v1/pass')) return B.api(req, res, url, form, client, json, fail);
     // the game's own signed-up players with their emails, for its owner's screen (the game's server only, never a browser)
     if (req.method === 'GET' && path === '/v1/players') {
       const accts = [];
@@ -551,8 +554,9 @@ export function makeCore(cfg, deps = {}) {
   // ---------- the router ----------
   async function handle(req, res) {
     const url = new URL(req.url, cfg.publicUrl), path = url.pathname;
+    if (req.method === 'POST' && path === '/stripe/webhook') return B.webhook(req, res, json);   // reads its own raw body
     const form = req.method === 'POST' || req.method === 'DELETE' ? await body(req) : {};
-    if (path === '/health') return json(res, (await pb.health()) ? 200 : 503, { ok: await pb.health(), google: !!cfg.google, email: cfg.mail.on });
+    if (path === '/health') return json(res, (await pb.health()) ? 200 : 503, { ok: await pb.health(), google: !!cfg.google, email: cfg.mail.on, pay: B.health() });
     if (path === '/') return go(res, '/account');
     if (req.method === 'GET' && path === '/authorize') return authorize(req, res, url);
     if (req.method === 'GET' && path === '/signin') return signinPage(req, res, readFlow(req));
@@ -577,7 +581,7 @@ export function makeCore(cfg, deps = {}) {
     return send(res, e.status ?? 500, P.message({ title: 'Something went wrong', text: 'Please go back and try again.' }));
   });
 
-  return { handler, pb, accounts: A, ensureSchema: () => ensureSchema(pb), listen: (port = cfg.port, host = cfg.host) => new Promise((ok) => { const srv = createServer(handler); srv.listen(port, host, () => ok(srv)); }) };
+  return { handler, pb, accounts: A, billing: B, ensureSchema: () => ensureSchema(pb), listen: (port = cfg.port, host = cfg.host) => new Promise((ok) => { const srv = createServer(handler); srv.listen(port, host, () => ok(srv)); }) };
 }
 
 /** "Safari on iPhone" from a user-agent string, for the list of places someone is signed in. */

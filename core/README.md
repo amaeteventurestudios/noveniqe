@@ -33,6 +33,13 @@ session cookie. Plain Node 22 with no dependencies.
   - Games ask `GET /v1/authz`, and can only ask about their own product.
 - **Accounts page.** Shows sign-in methods and sessions, with sign out there, sign out everywhere, and asking to delete
   the account.
+- **The pass (payments).** One Stripe account sells every game's pass (`lib/billing.mjs`). A game's plans sit with the game in
+  `deploy/clients.json` (`pass.plans`: price in US cents, on or off, the Stripe Price ID), so a new game sells a pass by adding
+  lines there. Game servers ask `GET /v1/pass?user_id=`, `GET /v1/passes`, and send players to `POST /v1/pass/checkout` and
+  `POST /v1/pass/manage` (Stripe's billing page). Stripe's signed webhooks (`POST /stripe/webhook`, or a game's own webhook
+  passed on unchanged) grant, renew and end a pass. `POST /v1/pass/import` brings in passes a game sold before Core did.
+  The Stripe keys come from the noveniqe secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, or else from Agent Grand
+  Prix's settings on the server.
 - **Staff admin API.** `/admin/api/*`: users, granting roles, and the audit trail.
 
 ## Where data lives

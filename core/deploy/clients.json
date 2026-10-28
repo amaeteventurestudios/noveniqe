@@ -1,16 +1,71 @@
 {
-  "note": "The games that sign people in through Novenique. No secrets here: each secret is made on the server by deploy/install.sh.",
+  "note": "The games that sign people in through Novenique and the pass each one sells (prices in US cents; a plan sells once it is on and has a price). No secrets here: each secret is made on the server by deploy/install.sh.",
   "clients": [
     {
-      "id": "agp", "name": "Agent Grand Prix", "product": "agp", "guests": true, "color": "#E10600",
-      "home": "https://agentgrandprix.com", "from": "Agent Grand Prix <no-reply@agentgrandprix.com>", "google_redirect": "https://agentgrandprix.com/auth/google/callback",
-      "redirect_uris": ["https://agentgrandprix.com/auth/novenique/callback", "https://www.agentgrandprix.com/auth/novenique/callback"]
+      "id": "agp",
+      "name": "Agent Grand Prix",
+      "product": "agp",
+      "guests": true,
+      "color": "#E10600",
+      "home": "https://agentgrandprix.com",
+      "from": "Agent Grand Prix <no-reply@agentgrandprix.com>",
+      "google_redirect": "https://agentgrandprix.com/auth/google/callback",
+      "redirect_uris": [
+        "https://agentgrandprix.com/auth/novenique/callback",
+        "https://www.agentgrandprix.com/auth/novenique/callback"
+      ],
+      "pass": {
+        "name": "Anti-Bot Pass",
+        "plans": {
+          "year": {
+            "cents": 599,
+            "interval": "year",
+            "count": 1,
+            "name": "Yearly",
+            "on": true,
+            "price": "price_1UVZYwK7r3L8izVdOGIk57Jl"
+          },
+          "quarter": {
+            "cents": 199,
+            "interval": "month",
+            "count": 3,
+            "name": "Quarterly",
+            "on": false
+          },
+          "month": {
+            "cents": 99,
+            "interval": "month",
+            "count": 1,
+            "name": "Monthly",
+            "on": false
+          }
+        }
+      }
     },
     {
-      "id": "palasora", "name": "Palasora", "product": "palasora", "guests": false, "color": "#C34218",
+      "id": "palasora",
+      "name": "Palasora",
+      "product": "palasora",
+      "guests": false,
+      "color": "#C34218",
       "home": "https://palasora.com",
-      "redirect_uris": ["https://palasora.com/auth/novenique/callback", "https://www.palasora.com/auth/novenique/callback",
-        "https://palasora.129-146-26-28.sslip.io/auth/novenique/callback"]
+      "redirect_uris": [
+        "https://palasora.com/auth/novenique/callback",
+        "https://www.palasora.com/auth/novenique/callback",
+        "https://palasora.129-146-26-28.sslip.io/auth/novenique/callback"
+      ],
+      "pass": {
+        "name": "Pass",
+        "plans": {
+          "year": {
+            "cents": 0,
+            "interval": "year",
+            "count": 1,
+            "name": "Yearly",
+            "on": false
+          }
+        }
+      }
     }
   ]
 }

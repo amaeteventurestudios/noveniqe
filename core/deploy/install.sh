@@ -50,9 +50,17 @@ NAMES=("$SPARE")
 [ "$(getent ahostsv4 "$MAIN_DNS" 2>/dev/null | awk 'NR==1{print $1}')" = "$HOST_IP" ] && NAMES=("$MAIN_DNS" "$SPARE")
 setkv CORE_PUBLIC_URL "https://${NAMES[0]}"
 if [ -f /tmp/novenique-core-keys.env ]; then
-  while IFS='=' read -r k v; do [ -n "$v" ] && setkv "$k" "$v"; done < <(grep -E '^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|RESEND_API_KEY|BREVO_API_KEY|MAIL_FROM|SMTP_HOST|SMTP_PORT|SMTP_USER|SMTP_PASS)=' /tmp/novenique-core-keys.env || true)
+  while IFS='=' read -r k v; do [ -n "$v" ] && setkv "$k" "$v"; done < <(grep -E '^(GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET|RESEND_API_KEY|BREVO_API_KEY|MAIL_FROM|SMTP_HOST|SMTP_PORT|SMTP_USER|SMTP_PASS|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET)=' /tmp/novenique-core-keys.env || true)
   rm -f /tmp/novenique-core-keys.env
 fi
+# Payments: one Stripe account for every game. Until the noveniqe repo has its own Stripe secrets, Core uses the ones Agent
+# Grand Prix was given (same account, same webhook), so the pass keeps selling when it moves into Core.
+for k in STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET; do
+  if ! sudo grep -q "^$k=." "$ENVF" && sudo test -f /etc/agent-grand-prix.env; then
+    v=$(sudo grep "^$k=" /etc/agent-grand-prix.env | head -1 | cut -d= -f2- | tr -d ' \r\n' || true)
+    if [ -n "$v" ]; then setkv "$k" "$v"; fi
+  fi
+done
 if sudo grep -q '^SMTP_PASS=.' "$ENVF" && sudo grep -q '^SMTP_HOST=.' "$ENVF"; then setkv MAIL_PROVIDER smtp
 elif sudo grep -q '^RESEND_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER resend; elif sudo grep -q '^BREVO_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER brevo; fi
 
