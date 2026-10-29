@@ -1,8 +1,10 @@
 # Puts Novenique's server safety pieces on the shared server whenever ops/ changes on main: nightly backups, the weekly
 # restore drill, memory and CPU ceilings per service, and a cap on log size (ops/server/install.sh). Then it takes a first
-# backup and drills it, so you can see the result in the run's summary.
+# backup and drills it, so you can see the result in the run's summary. It also installs the status page (Uptime Kuma)
+# and visitor stats (Umami), see ops/server/monitoring.sh.
 # One-time setup, in this repo's Settings > Secrets and variables > Actions, the same three secrets the games use:
 #   SERVER_HOST, SERVER_USER, SERVER_SSH_KEY
+# and OWNER_PASSWORD (a password of your choice): it opens the status page and is the visitor stats' admin password.
 name: Server safety (deploy)
 on:
   push:
@@ -13,7 +15,7 @@ concurrency: server-ops
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Test the backup tool
@@ -22,11 +24,14 @@ jobs:
         env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
         run: bash ops/ci/ssh-setup.sh
       - name: Install on the server
+        env: { OWNER_PASSWORD: '${{ secrets.OWNER_PASSWORD }}' }
         run: |
           set -euo pipefail
           tar czf novenique-ops.tgz --exclude='__pycache__' --exclude='test_*.py' -C ops .
           $SCP novenique-ops.tgz "$DEST:/tmp/"
-          $SSH 'bash -s' < ops/server/install.sh
+          # the password travels inside the ssh connection, never on a command line
+          [ -z "$OWNER_PASSWORD" ] || printf 'OWNER_PASSWORD=%s\n' "$OWNER_PASSWORD" | $SSH 'umask 077; cat > /tmp/novenique-owner.env'
+          $SSH "PUBLIC_IP=${DEST#*@} bash -s" < ops/server/install.sh
       - name: First backup and restore drill
         run: |
           set -euo pipefail
