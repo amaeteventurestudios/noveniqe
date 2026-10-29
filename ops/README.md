@@ -10,7 +10,9 @@ or web server files.
 | Off-server copy | 04:15 UTC: the newest backup, encrypted with your passphrase on GitHub's machine, kept 30 days as a workflow artifact. Fails (and emails you) if the newest backup is over 30 hours old. | `.github/workflows/backup-offsite.yml` |
 | Ceilings | Memory and CPU limits per service (never below twice what a service uses at install time); system log capped at 500 MB. | `server/install.sh` |
 | Server check | Read-only report: memory, disk, CPU, services, ports, versions, data sizes, backups, timers. Mondays, or on demand. | `check/server-check.sh`, `.github/workflows/server-check.yml` |
-| Uptime | Both sites every 15 minutes; opens an issue here when one is down, closes it when it's back. | `.github/workflows/uptime.yml` |
+| Status page | Uptime Kuma (MIT): checks every site each minute, keeps the history, can alert by email or Telegram. At `https://status.129-146-26-28.sslip.io` behind your `OWNER_PASSWORD` (username `owner`); create its admin account on the first visit. | `server/monitoring.sh` |
+| Visitor stats | Umami (MIT): page views without cookies or personal data, for Jisste and the games, with its own Postgres (dumped nightly at 03:20 for the backup). At `https://stats.129-146-26-28.sslip.io`, username `admin`, password your `OWNER_PASSWORD`. | `server/monitoring.sh` |
+| Uptime | Every site every 15 minutes; opens an issue here when one is down, closes it when it's back. | `.github/workflows/uptime.yml` |
 | Race benchmark | How many real-time races the server can run at once, with the game's own engine. On demand. | `bench/race-bench.mjs`, `.github/workflows/bench.yml` |
 
 ## One-time setup
@@ -19,6 +21,7 @@ In this repository's **Settings > Secrets and variables > Actions > New reposito
 
 - `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`: the same values the games use.
 - `BACKUP_PASSPHRASE`: a long sentence only you know. Save it in your password manager too: a restore needs it.
+- `OWNER_PASSWORD`: a password of your choice. It opens the status page and is the visitor stats' admin password.
 
 Then open **Actions > Server safety (deploy) > Run workflow** once (later it runs by itself when `ops/` changes).
 

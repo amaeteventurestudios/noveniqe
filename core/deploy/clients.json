@@ -66,6 +66,19 @@
           }
         }
       }
+    },
+    {
+      "id": "jisst",
+      "name": "Jisste",
+      "product": "jisst",
+      "guests": false,
+      "color": "#5B3DF5",
+      "home": "https://jisste.com",
+      "redirect_uris": [
+        "https://jisste.com/auth/novenique/callback",
+        "https://www.jisste.com/auth/novenique/callback",
+        "https://jisste.129-146-26-28.sslip.io/auth/novenique/callback"
+      ]
     }
   ]
 }
