@@ -1,4 +1,4 @@
-// Novenique Core: one account for every Novenique game, at accounts.novenique.com.
+// Novenique Core: one account for every Novenique game, at accounts.noveniqe.com.
 //
 // Signing in from a game (the "authorization code with PKCE" flow, so the two game domains never share a cookie):
 //   1. the game sends the player to /authorize?client_id&redirect_uri&state&code_challenge&code_challenge_method=S256
