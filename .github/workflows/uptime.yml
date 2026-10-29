@@ -1,4 +1,4 @@
-# Checks both games, Jisst and the accounts service every 15 minutes. When one stops answering it opens an issue in this repo (GitHub emails you);
+# Checks both games, Jisste and the accounts service every 15 minutes. When one stops answering it opens an issue in this repo (GitHub emails you);
 # when it answers again it closes that issue. Free on a public repository.
 name: Uptime
 on:
@@ -14,7 +14,7 @@ jobs:
       - name: Check the sites
         env:
           GH_TOKEN: ${{ github.token }}
-          SITES: ${{ vars.UPTIME_URLS || 'https://agentgrandprix.com/ https://palasora.com/api/v1/health https://accounts.129-146-26-28.sslip.io/health https://jisst.129-146-26-28.sslip.io/api/health' }}
+          SITES: ${{ vars.UPTIME_URLS || 'https://agentgrandprix.com/ https://palasora.com/api/v1/health https://accounts.129-146-26-28.sslip.io/health https://jisste.129-146-26-28.sslip.io/api/health' }}
         run: |
           down=''
           for u in $SITES; do

@@ -99,7 +99,7 @@ umami() {
   # One website entry per product; their ids go to the products' installs through this file.
   tok=$(login "$cur")
   if [ -n "$tok" ]; then
-    for site in "JISST jisst.app Jisst" "AGP agentgrandprix.com Agent-Grand-Prix" "PALASORA palasora.com Palasora"; do
+    for site in "JISST jisste.com Jisste" "AGP agentgrandprix.com Agent-Grand-Prix" "PALASORA palasora.com Palasora"; do
       set -- $site
       [ -n "$(get "SITE_$1")" ] && continue
       id=$(curl -fsS -H "authorization: Bearer $tok" -H 'content-type: application/json' -d "{\"name\":\"${3//-/ }\",\"domain\":\"$2\"}" http://127.0.0.1:3002/api/websites | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id",""))' || true)

@@ -11,7 +11,7 @@ or web server files.
 | Ceilings | Memory and CPU limits per service (never below twice what a service uses at install time); system log capped at 500 MB. | `server/install.sh` |
 | Server check | Read-only report: memory, disk, CPU, services, ports, versions, data sizes, backups, timers. Mondays, or on demand. | `check/server-check.sh`, `.github/workflows/server-check.yml` |
 | Status page | Uptime Kuma (MIT): checks every site each minute, keeps the history, can alert by email or Telegram. At `https://status.129-146-26-28.sslip.io` behind your `OWNER_PASSWORD` (username `owner`); create its admin account on the first visit. | `server/monitoring.sh` |
-| Visitor stats | Umami (MIT): page views without cookies or personal data, for Jisst and the games, with its own Postgres (dumped nightly at 03:20 for the backup). At `https://stats.129-146-26-28.sslip.io`, username `admin`, password your `OWNER_PASSWORD`. | `server/monitoring.sh` |
+| Visitor stats | Umami (MIT): page views without cookies or personal data, for Jisste and the games, with its own Postgres (dumped nightly at 03:20 for the backup). At `https://stats.129-146-26-28.sslip.io`, username `admin`, password your `OWNER_PASSWORD`. | `server/monitoring.sh` |
 | Uptime | Every site every 15 minutes; opens an issue here when one is down, closes it when it's back. | `.github/workflows/uptime.yml` |
 | Race benchmark | How many real-time races the server can run at once, with the game's own engine. On demand. | `bench/race-bench.mjs`, `.github/workflows/bench.yml` |
 
