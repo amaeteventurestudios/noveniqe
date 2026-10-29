@@ -30,7 +30,7 @@ export function loadConfig(env = process.env, overrides = {}) {
     clients,
     google: env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? { id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET,
       authUrl: env.GOOGLE_AUTH_URL ?? 'https://accounts.google.com/o/oauth2/v2/auth', tokenUrl: env.GOOGLE_TOKEN_URL ?? 'https://oauth2.googleapis.com/token' } : null,
-    mail: { provider: mailProvider, from: env.MAIL_FROM || (env.SMTP_USER ? env.SMTP_USER : 'Novenique <accounts@novenique.com>'), resendKey: env.RESEND_API_KEY ?? '', brevoKey: env.BREVO_API_KEY ?? '',
+    mail: { provider: mailProvider, from: env.MAIL_FROM || (env.SMTP_USER ? env.SMTP_USER : 'Novenique <accounts@noveniqe.com>'), resendKey: env.RESEND_API_KEY ?? '', brevoKey: env.BREVO_API_KEY ?? '',
       sinkFile: env.MAIL_SINK_FILE ?? '',
       smtp: { host: env.SMTP_HOST ?? '', port: Number(env.SMTP_PORT || 465), user: env.SMTP_USER ?? '', pass: env.SMTP_PASS ?? '' } },
     // payments: one Stripe account for every game (lib/billing.mjs); STRIPE_PRICE_<PRODUCT>_<PLAN> overrides a plan's Price ID

@@ -1,6 +1,6 @@
 # Novenique Core: one account for every game
 
-Core runs the accounts site (accounts.novenique.com, spare address accounts.129-146-26-28.sslip.io). People sign in
+Core runs the accounts site (accounts.noveniqe.com, spare address accounts.129-146-26-28.sslip.io). People sign in
 there once and play both Agent Grand Prix and Palasora under one user id. Each game keeps its own brand and its own
 session cookie. Plain Node 22 with no dependencies.
 
@@ -67,5 +67,5 @@ PB_MIGRATIONS=../palasora/services/pocketbase/pb_migrations PB_BIN=... npm test 
   - one secret per game in `/etc/novenique/clients/`, with Palasora's copy in `/etc/palasora-novenique.env`;
   - Core's own database account;
   - the Caddy site file.
-- `accounts.novenique.com` is added automatically on the first deploy after its DNS record points at the server.
+- `accounts.noveniqe.com` is added automatically on the first deploy after its DNS record points at the server.
 - The first Super Administrator is set with the **Grant a role** workflow (Actions tab), after they have signed in once.

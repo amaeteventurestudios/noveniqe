@@ -4,14 +4,14 @@
 #   - its own Node in /opt/novenique-node, code in /opt/novenique/core, service novenique-core on 127.0.0.1:8200
 #   - settings and secrets in /etc/novenique (made once on the server; never in the repo or in chat)
 #   - a database account of its own in Palasora's PocketBase (the shared store), and Core's own nv_* tables
-#   - its web address in the shared Caddy: accounts.novenique.com once that name points here, and always the spare
+#   - its web address in the shared Caddy: accounts.noveniqe.com once that name points here, and always the spare
 #     accounts.<server-ip>.sslip.io
 # Optional keys arrive in /tmp/novenique-core-keys.env (from GitHub secrets) and are moved into the env file.
 # Safe to run again.
 set -euo pipefail
 APP=/opt/novenique/core NODE_DIR=/opt/novenique-node ETC=/etc/novenique ENVF=/etc/novenique/core.env PORT=8200 NODE_V=v22.11.0
 HOST_IP=${HOST_IP:?}
-SPARE="accounts.${HOST_IP//./-}.sslip.io" MAIN_DNS=accounts.novenique.com
+SPARE="accounts.${HOST_IP//./-}.sslip.io" MAIN_DNS=accounts.noveniqe.com
 
 # ---- system user, Node, code ----
 id novenique >/dev/null 2>&1 || sudo useradd --system --home /nonexistent --shell /usr/sbin/nologin novenique
