@@ -66,6 +66,19 @@
           }
         }
       }
+    },
+    {
+      "id": "jisst",
+      "name": "Jisst",
+      "product": "jisst",
+      "guests": false,
+      "color": "#5B3DF5",
+      "home": "https://jisst.app",
+      "redirect_uris": [
+        "https://jisst.app/auth/novenique/callback",
+        "https://jisste.com/auth/novenique/callback",
+        "https://jisst.129-146-26-28.sslip.io/auth/novenique/callback"
+      ]
     }
   ]
 }
