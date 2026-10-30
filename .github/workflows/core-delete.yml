@@ -1,0 +1,23 @@
+# Deletes someone's account in Novenique (a test account, or a person who asked by email): their name, @handle and email
+# are removed and every sign-in and role ends; game records keep an anonymous id. The person can sign up again later.
+name: Delete an account
+on:
+  workflow_dispatch:
+    inputs:
+      who: { description: 'Email or @handle (an @handle keeps the email out of this public run page)', required: true }
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Delete
+        env: { WHO: '${{ inputs.who }}' }
+        run: |
+          set -euo pipefail
+          [[ "$WHO" =~ ^[@A-Za-z0-9._+-]+$ ]] || { echo "::error::Unexpected characters in: $WHO"; exit 1; }
+          # the email is not printed: this repo's logs are public
+          $SSH "cd /opt/novenique/core && sudo -u novenique /opt/novenique-node/bin/node tools/delete-user.mjs --env /etc/novenique/core.env $WHO" | tee -a "$GITHUB_STEP_SUMMARY"
