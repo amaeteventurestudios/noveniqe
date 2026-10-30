@@ -97,3 +97,21 @@ test('a game\'s older passes import once and never shorten a pass', async () => 
   const h = await (await fetch(t.base + '/health')).json();
   assert.deepEqual(h.pay, { stripe: true, selling: ['agp'] });
 });
+
+test('staff of the game or of the platform hold the pass free; a player or another game\'s staff does not', async () => {
+  const cases = [['agp', 'agp_admin', true], ['platform', 'super_admin', true], ['platform', 'moderator', true], ['agp', 'player', false], ['palasora', 'palasora_admin', false]];
+  for (const [product, role, want] of cases) {
+    const uid = await guest();
+    await t.pb.create('nv_roles', { user_id: uid, product, role, granted_by: 'test' });
+    const p = await api(t, CLIENTS.agp, 'GET', `/v1/pass?user_id=${uid}`);
+    assert.equal(p.body.active, want, `${product}:${role}`);
+    if (want) assert.equal(p.body.manage, false, 'nothing to manage on Stripe');
+  }
+});
+
+test('checkout lets a promotion code be entered', async () => {
+  const uid = await guest(); calls.length = 0;
+  await api(t, CLIENTS.agp, 'POST', '/v1/pass/checkout', { user_id: uid, email: 'a@b.test' }).catch(() => {});
+  const c = calls.find((x) => x.url.includes('checkout/sessions'));
+  assert.ok(c, 'checkout reached Stripe'); assert.match(c.body, /allow_promotion_codes=true/);
+});
