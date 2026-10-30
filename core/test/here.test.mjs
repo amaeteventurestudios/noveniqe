@@ -128,3 +128,26 @@ test('the game can list its own signed-up players, with emails; another game see
   assert.ok(!other.body.players.some((p) => p.email === email));
   assert.equal((await fetch(t.base + '/v1/players')).status, 401);
 });
+
+test('staff delete an account: name, handle and email gone, off the players list, and the email can sign up again', async () => {
+  resetLimits();
+  const email = `del.${uniq()}@example.com`, handle = 'del_' + uniq();
+  await agp('/v1/signin/email/start', { email });
+  const v = await agp('/v1/signin/email/verify', { email, code: t.cfg.mail.last.code });
+  await agp('/v1/signin/profile', { ticket: v.body.ticket, display_name: 'Del', handle });
+  const id = v.body.user.id;
+  const { makeAccounts } = await import('../lib/accounts.mjs');
+  await makeAccounts({ pb: t.pb, cfg: t.cfg }).erase(id);
+  const u = await t.pb.get('users', id);
+  assert.equal(u.account_status, 'deleted');
+  assert.equal(u.handle, '');
+  assert.equal(u.display_name, 'Deleted player');
+  assert.ok(u.email.endsWith('.invalid'));
+  assert.equal((await t.pb.list('nv_identities', { filter: `user_id='${id}'` })).length, 0);
+  assert.ok(!(await api(t, CLIENTS.agp, 'GET', '/v1/players')).body.players.some((p) => p.email === email));
+  await agp('/v1/signin/email/start', { email });
+  const again = await agp('/v1/signin/email/verify', { email, code: t.cfg.mail.last.code });
+  assert.equal(again.status, 200);
+  assert.notEqual(again.body.user.id, id, 'a fresh account');
+  assert.equal(again.body.needs_profile, true);
+});

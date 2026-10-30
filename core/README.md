@@ -40,6 +40,8 @@ session cookie. Plain Node 22 with no dependencies.
   passed on unchanged) grant, renew and end a pass. `POST /v1/pass/import` brings in passes a game sold before Core did.
   The Stripe keys come from the noveniqe secrets `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`, or else from Agent Grand
   Prix's settings on the server.
+- **Deleting an account.** The Actions workflow "Delete an account" (`core/tools/delete-user.mjs`, `A.erase()`) removes the name,
+  @handle and email, ends every sign-in, identity and role, and keeps the anonymous id for game records. The same email can sign up again.
 - **Staff admin API.** `/admin/api/*`: users, granting roles, and the audit trail.
 
 ## Where data lives

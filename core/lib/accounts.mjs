@@ -129,6 +129,19 @@ export function makeAccounts({ pb, cfg }) {
       await A.audit(u.id, 'account.profile_changed', u.id);
       return null;
     },
+    /** Deletes an account, as the account page promises: the name, @handle and email go, sign-ins and roles end, and the
+     *  person can sign up again with the same email. Game records keep the anonymous id. Run by staff (tools/delete-user.mjs). */
+    async erase(userId, by = 'server-tool') {
+      const u = await A.user(userId);
+      await pb.update('users', u.id, { account_status: 'deleted', display_name: 'Deleted player', handle: '', verified: false,
+        email: `d${u.id.toLowerCase()}@${GUEST_DOMAIN}` });
+      for (const c of ['nv_sessions', 'nv_identities', 'nv_roles', 'nv_handle_holds']) {
+        for (const x of await pb.list(c, { filter: `user_id=${q(u.id)}`, perPage: 200 }).catch(() => [])) await pb.remove(c, x.id).catch(() => {});
+      }
+      const a = await A.account(u.id);
+      if (a) await pb.update('nv_accounts', a.id, { guest_token_hash: '', deletion_requested_at: a.deletion_requested_at || pbDate() });
+      await A.audit(by, 'account.deleted', u.id, { via: 'erase' }, 'system');
+    },
     publicView(u, acct) {
       return { id: u.id, display_name: u.display_name ?? '', handle: u.handle ?? '', kind: acct?.kind ?? 'member', email_verified: !!u.verified && !isPlaceholder(u.email) };
     },
