@@ -1,0 +1,44 @@
+# Brings the shared server into USG Grid (the infrastructure dashboard on ai-node-01). Press "Run workflow" and pick:
+#   join                 install Tailscale and join the tailnet as `noveniqe-prod` (needs the TS_AUTHKEY secret, once)
+#   allow-install-key    let ai-node-01 install Grid's read-only telemetry: authorizes the public key you paste for
+#                        `ubuntu`, from ai-node-01's tailnet addresses only (nothing else can use it)
+#   revoke-install-key   remove that key again once the telemetry is installed
+#   status               show the Tailscale state and whether the install key is present
+# Changes no site, service or firewall rule. Tailscale only adds its own interface.
+name: Join USG Grid
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [status, join, allow-install-key, revoke-install-key]
+        default: status
+      install_pubkey:
+        description: 'allow-install-key only: ai-node-01 public key (one line, ssh-ed25519 ...)'
+        required: false
+concurrency: server-ops
+jobs:
+  grid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Run
+        env:
+          ACTION: ${{ inputs.action }}
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
+          PUBKEY: ${{ inputs.install_pubkey }}
+        run: |
+          set -euo pipefail
+          if [ "$ACTION" = join ] && [ -z "$TS_AUTHKEY" ]; then
+            echo '::error::Add a TS_AUTHKEY secret first (Tailscale admin → Settings → Keys → Generate auth key).'; exit 1
+          fi
+          if [ "$ACTION" = allow-install-key ]; then
+            PUBKEY=$(printf '%s' "$PUBKEY" | grep -oE '^(ssh-ed25519|ecdsa-sha2-nistp256) [A-Za-z0-9+/=]+' || true)
+            [ -n "$PUBKEY" ] || { echo '::error::Paste one public key line (ssh-ed25519 AAAA...).'; exit 1; }
+          fi
+          # The auth key travels on stdin, never on a command line the server could log.
+          { printf '%s\n' "${TS_AUTHKEY:-}"; cat .github/grid/server.sh; } | $SSH "sudo ACTION='$ACTION' PUBKEY='${PUBKEY:-}' bash -c 'read -r TS_AUTHKEY; export TS_AUTHKEY; bash -s'" | tee -a "$GITHUB_STEP_SUMMARY"
