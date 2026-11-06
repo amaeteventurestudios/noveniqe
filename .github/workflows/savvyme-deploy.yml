@@ -1,0 +1,75 @@
+# Puts SavvyMe (the daily 3D learning app, repo amaeteventurestudios/savvyme) on the shared server, using the server
+# secrets this repo already has, so the savvyme repo needs none. Every 30 minutes it looks at the savvyme repo's main
+# branch and deploys it when it changed since the last deploy; "Run workflow" deploys straight away. The work itself is
+# the savvyme repo's server/install.sh (the static site, its own PocketBase on 127.0.0.1:8196, a site file in the shared
+# Caddy). Everything is on one host: the home page at /, the quiz at /start/, the app at /app/, accounts at /api.
+# Optional variable in this repo: SAVVYME_DOMAIN (default savvyme.amaete.com; savvyme.<ip>.sslip.io always works too).
+# Optional secrets: SAVVYME_ADMIN_EMAIL and SAVVYME_ADMIN_PASSWORD (10+ characters) open /app/admin/ and the dashboard /_/.
+name: SavvyMe (deploy)
+on:
+  schedule: [{ cron: '7,37 * * * *' }]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/savvyme-deploy.yml']
+concurrency: deploy-savvyme
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/savvyme, ref: main }
+      - name: Server login
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: |
+          set -euo pipefail
+          k="$RUNNER_TEMP/k"; install -m 600 /dev/null "$k"; printf '%s\n' "$KEY" | tr -d '\r' | sed -n '/-----BEGIN/,/-----END/p' > "$k"
+          h=$(printf '%s' "$HOST" | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}|[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+' | tail -1)
+          u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
+          { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; echo "SPARE=savvyme.$(printf '%s' "$h" | tr . -).sslip.io"; } >> "$GITHUB_ENV"
+      - name: Anything new?
+        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.SAVVYME_DOMAIN || ''savvyme.amaete.com'' }}' }
+        run: |
+          sha=$(git rev-parse HEAD)
+          now=$(ssh -i "$K" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$U@$H" 'cat /opt/savvyme/DEPLOYED 2>/dev/null' || true)
+          # the domain goes into Caddy only once its DNS points here, so a later run adds it even when the code hasn't changed
+          dns=$(getent ahostsv4 "$DOMAIN" | awk 'NR==1{print $1}' || true)
+          has=$(ssh -i "$K" "$U@$H" "grep -c '$DOMAIN' /etc/caddy/sites/savvyme.caddy 2>/dev/null" || true)
+          if [ "$dns" = "$H" ] && [ "${has:-0}" = 0 ]; then now="domain-new"; fi
+          if [ "$now" = "$sha" ] && [ "$EVENT" = schedule ]; then echo "SavvyMe $sha is already on the server."; echo 'GO=0' >> "$GITHUB_ENV"
+          else echo "Deploying savvyme $sha (on the server: ${now:-nothing yet})"; { echo 'GO=1'; echo "SHA=$sha"; } >> "$GITHUB_ENV"
+            # until the DNS record points at the server, serve only the free sslip.io name (Caddy can't get a certificate yet)
+            if [ "$dns" = "$H" ]; then echo "NAMES=$DOMAIN" >> "$GITHUB_ENV"; else echo "NAMES=" >> "$GITHUB_ENV"; echo "::notice::$DOMAIN doesn't point at the server yet; deploying on $SPARE only."; fi
+          fi
+      - uses: actions/setup-node@v4
+        if: env.GO == '1'
+        with: { node-version: 22 }
+      - name: Check the course data loads
+        if: env.GO == '1'
+        run: node -e "Promise.all([import('./shared/courses.js'), import('./shared/lessons.js')]).then(([c, l]) => { const miss = c.COURSES.flatMap(x => x.lessons).filter(id => !l.LESSONS[id]); if (miss.length) { console.error('Missing lessons:', miss); process.exit(1); } console.log('Courses OK') })"
+      - name: Pack, copy to the server and install
+        if: env.GO == '1'
+        env:
+          PB_ADMIN_EMAIL: ${{ secrets.SAVVYME_ADMIN_EMAIL }}
+          PB_ADMIN_PASSWORD: ${{ secrets.SAVVYME_ADMIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          tar czf "$RUNNER_TEMP/savvyme.tgz" index.html home.css home.js favicon.svg site.webmanifest robots.txt shared start app vendor server/pb_migrations server/pb_hooks
+          scp -i "$K" -o StrictHostKeyChecking=accept-new "$RUNNER_TEMP/savvyme.tgz" "$U@$H:/tmp/"
+          # the admin sign-in rides in on the script's first lines, quoted, so it never shows in the log or the command line
+          { printf 'export PB_ADMIN_EMAIL=%q PB_ADMIN_PASSWORD=%q\n' "$PB_ADMIN_EMAIL" "$PB_ADMIN_PASSWORD"; cat server/install.sh; } \
+            | ssh -i "$K" "$U@$H" "SAVVYME_DOMAIN='$NAMES' SPARE='$SPARE' bash -s"
+          ssh -i "$K" "$U@$H" "echo $SHA | sudo tee /opt/savvyme/DEPLOYED >/dev/null"
+      - name: Check the site answers
+        if: env.GO == '1'
+        run: |
+          rm -f "$K"
+          ok=0
+          for n in $NAMES "$SPARE"; do
+            up=0
+            for i in $(seq 1 9); do curl -fsS -m 15 -o /dev/null "https://$n/" && { up=1; break; }; sleep 10; done
+            if [ "$up" = 1 ]; then echo "OK: https://$n" | tee -a "$GITHUB_STEP_SUMMARY"; ok=1
+            else echo "::warning::https://$n doesn't answer yet (the first HTTPS certificate can take a minute)."; fi
+          done
+          [ "$ok" = 1 ] || { echo "::error::SavvyMe doesn't answer from outside."; exit 1; }
