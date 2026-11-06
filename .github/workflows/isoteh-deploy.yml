@@ -2,7 +2,7 @@
 # already has, so the isoteh repo needs none. Every 30 minutes it looks at the isoteh repo's main branch and deploys it
 # when it changed since the last deploy; "Run workflow" deploys straight away. The work itself is the isoteh repo's
 # deploy/install.sh (its own Node, service isoteh on 127.0.0.1:8400, data in /var/lib/isoteh, a site file in the shared Caddy).
-# Optional variable in this repo: ISOTEH_DOMAIN (default isoteh.noveniqe.com; ads.<ip>.sslip.io always works too).
+# Optional variable in this repo: ISOTEH_DOMAIN (default isoteh.amaete.com; ads.<ip>.sslip.io always works too).
 # Payment keys (Stripe) are added later as secrets ISOTEH_STRIPE_SECRET_KEY and ISOTEH_STRIPE_WEBHOOK_SECRET.
 name: Isoteh (deploy)
 on:
@@ -28,7 +28,7 @@ jobs:
           u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
           { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; } >> "$GITHUB_ENV"
       - name: Anything new?
-        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.ISOTEH_DOMAIN || ''isoteh.noveniqe.com'' }}' }
+        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.ISOTEH_DOMAIN || ''isoteh.amaete.com'' }}' }
         run: |
           sha=$(git rev-parse HEAD)
           now=$(ssh -i "$K" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$U@$H" 'cat /opt/isoteh/DEPLOYED 2>/dev/null' || true)
@@ -47,7 +47,7 @@ jobs:
       - name: Pack, copy to the server and install
         if: env.GO == '1'
         env:
-          DOMAIN: ${{ vars.ISOTEH_DOMAIN || 'isoteh.noveniqe.com' }}
+          DOMAIN: ${{ vars.ISOTEH_DOMAIN || 'isoteh.amaete.com' }}
           STRIPE_SECRET_KEY: ${{ secrets.ISOTEH_STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.ISOTEH_STRIPE_WEBHOOK_SECRET }}
         run: |
@@ -62,7 +62,7 @@ jobs:
           echo "IP=$ip" >> "$GITHUB_ENV"
       - name: Check the site answers
         if: env.GO == '1'
-        env: { DOMAIN: '${{ vars.ISOTEH_DOMAIN || ''isoteh.noveniqe.com'' }}' }
+        env: { DOMAIN: '${{ vars.ISOTEH_DOMAIN || ''isoteh.amaete.com'' }}' }
         run: |
           rm -f "$K"
           ok=0
