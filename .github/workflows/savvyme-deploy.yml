@@ -3,7 +3,7 @@
 # branch and deploys it when it changed since the last deploy; "Run workflow" deploys straight away. The work itself is
 # the savvyme repo's server/install.sh (the static site, its own PocketBase on 127.0.0.1:8196, a site file in the shared
 # Caddy). Everything is on one host: the home page at /, the quiz at /start/, the app at /app/, accounts at /api.
-# Optional variable in this repo: SAVVYME_DOMAIN (default savvyme.noveniqe.com; savvyme.<ip>.sslip.io always works too).
+# Optional variable in this repo: SAVVYME_DOMAIN (default savvyme.amaete.com; savvyme.<ip>.sslip.io always works too).
 # Optional secrets: SAVVYME_ADMIN_EMAIL and SAVVYME_ADMIN_PASSWORD (10+ characters) open /app/admin/ and the dashboard /_/.
 name: SavvyMe (deploy)
 on:
@@ -29,7 +29,7 @@ jobs:
           u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
           { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; echo "SPARE=savvyme.$(printf '%s' "$h" | tr . -).sslip.io"; } >> "$GITHUB_ENV"
       - name: Anything new?
-        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.SAVVYME_DOMAIN || ''savvyme.noveniqe.com'' }}' }
+        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.SAVVYME_DOMAIN || ''savvyme.amaete.com'' }}' }
         run: |
           sha=$(git rev-parse HEAD)
           now=$(ssh -i "$K" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$U@$H" 'cat /opt/savvyme/DEPLOYED 2>/dev/null' || true)
