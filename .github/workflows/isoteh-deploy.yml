@@ -1,0 +1,75 @@
+# Puts Isoteh (the ad server, repo amaeteventurestudios/isoteh) on the shared server, using the server secrets this repo
+# already has, so the isoteh repo needs none. Every 30 minutes it looks at the isoteh repo's main branch and deploys it
+# when it changed since the last deploy; "Run workflow" deploys straight away. The work itself is the isoteh repo's
+# deploy/install.sh (its own Node, service isoteh on 127.0.0.1:8400, data in /var/lib/isoteh, a site file in the shared Caddy).
+# Optional variable in this repo: ISOTEH_DOMAIN (default isoteh.noveniqe.com; ads.<ip>.sslip.io always works too).
+# Payment keys (Stripe) are added later as secrets ISOTEH_STRIPE_SECRET_KEY and ISOTEH_STRIPE_WEBHOOK_SECRET.
+name: Isoteh (deploy)
+on:
+  schedule: [{ cron: '17,47 * * * *' }]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/isoteh-deploy.yml']
+concurrency: deploy-isoteh
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/isoteh, ref: main }
+      - name: Server login
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: |
+          set -euo pipefail
+          k="$RUNNER_TEMP/k"; install -m 600 /dev/null "$k"; printf '%s\n' "$KEY" | tr -d '\r' | sed -n '/-----BEGIN/,/-----END/p' > "$k"
+          h=$(printf '%s' "$HOST" | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}|[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+' | tail -1)
+          u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
+          { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; } >> "$GITHUB_ENV"
+      - name: Anything new?
+        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.ISOTEH_DOMAIN || ''isoteh.noveniqe.com'' }}' }
+        run: |
+          sha=$(git rev-parse HEAD)
+          now=$(ssh -i "$K" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$U@$H" 'cat /opt/isoteh/DEPLOYED 2>/dev/null' || true)
+          # once the domain's DNS points here, the next run adds it to Caddy even when the code hasn't changed
+          dns=$(getent ahostsv4 "$DOMAIN" | awk 'NR==1{print $1}' || true)
+          has=$(ssh -i "$K" "$U@$H" "grep -c '$DOMAIN' /etc/caddy/sites/isoteh.caddy 2>/dev/null" || true)
+          if [ -n "$dns" ] && [ "${has:-0}" = 0 ]; then now="domain-new"; fi
+          if [ "$now" = "$sha" ] && [ "$EVENT" = schedule ]; then echo "Isoteh $sha is already on the server."; echo 'GO=0' >> "$GITHUB_ENV"
+          else echo "Deploying isoteh $sha (on the server: ${now:-nothing yet})"; { echo 'GO=1'; echo "SHA=$sha"; } >> "$GITHUB_ENV"; fi
+      - uses: actions/setup-node@v4
+        if: env.GO == '1'
+        with: { node-version: 22 }
+      - name: Test
+        if: env.GO == '1'
+        run: npm test
+      - name: Pack, copy to the server and install
+        if: env.GO == '1'
+        env:
+          DOMAIN: ${{ vars.ISOTEH_DOMAIN || 'isoteh.noveniqe.com' }}
+          STRIPE_SECRET_KEY: ${{ secrets.ISOTEH_STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.ISOTEH_STRIPE_WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          tar --exclude=.git --exclude=data --exclude=test -czf "$RUNNER_TEMP/isoteh.tgz" .
+          { echo "ISOTEH_BRAND=Isoteh"; echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"; echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET"; } > "$RUNNER_TEMP/isoteh-keys.env"
+          cp "$RUNNER_TEMP/isoteh.tgz" "$RUNNER_TEMP/isoteh-keys.env" /tmp/
+          scp -i "$K" -o StrictHostKeyChecking=accept-new /tmp/isoteh.tgz /tmp/isoteh-keys.env deploy/install.sh "$U@$H:/tmp/"
+          rm -f /tmp/isoteh-keys.env "$RUNNER_TEMP/isoteh-keys.env"
+          ip=$(ssh -i "$K" "$U@$H" "curl -fsS -4 -m 10 https://api.ipify.org || hostname -I | awk '{print \$1}'")
+          ssh -i "$K" "$U@$H" "HOST_IP=$ip ADS_DOMAIN=$DOMAIN bash /tmp/install.sh && echo $SHA | sudo tee /opt/isoteh/DEPLOYED >/dev/null"
+          echo "IP=$ip" >> "$GITHUB_ENV"
+      - name: Check the site answers
+        if: env.GO == '1'
+        env: { DOMAIN: '${{ vars.ISOTEH_DOMAIN || ''isoteh.noveniqe.com'' }}' }
+        run: |
+          rm -f "$K"
+          ok=0
+          for n in "$DOMAIN" "ads.${IP//./-}.sslip.io"; do
+            up=0
+            for i in $(seq 1 9); do curl -fsS -m 15 -o /dev/null "https://$n/healthz" && { up=1; break; }; sleep 10; done
+            if [ "$up" = 1 ]; then echo "OK: https://$n" | tee -a "$GITHUB_STEP_SUMMARY"; ok=1
+            else echo "::warning::https://$n doesn't answer yet. For a domain, check its DNS A record points at the server (Cloudflare: DNS only, grey cloud)."; fi
+          done
+          [ "$ok" = 1 ] || { echo "::error::Isoteh doesn't answer from outside."; exit 1; }
