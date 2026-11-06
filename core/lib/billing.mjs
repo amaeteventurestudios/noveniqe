@@ -13,6 +13,7 @@
 // may also pass its own webhook on here unchanged (body and Stripe-Signature header), so Stripe's settings need not change.
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { q } from './pb.mjs';
+import { isStaff } from './roles.mjs';
 
 const DAY = 864e5, GRACE = 2 * DAY;   // a renewal that is a day or two late doesn't lock anyone out
 const SAFE = /^[a-z0-9]{15}$/;        // a Core user id
@@ -43,12 +44,17 @@ export function makeBilling({ cfg, pb, A, fetchImpl = fetch }) {
     const cur = await row(userId, product);
     return cur ? pb.update('nv_passes', cur.id, data) : pb.create('nv_passes', { user_id: userId, product, ...data });
   }
-  /** The pass of a person for one game; a guest merged into an account carries over. */
+  /** The pass of a person for one game; a guest merged into an account carries over. Staff (any staff role on this game
+   * or on the whole platform) hold it free, so the people who run a game never meet its checkout. */
   async function passOf(userId, product) {
     const id = SAFE.test(userId) ? await A.resolve(userId) : null;
     if (!id) return null;
     const p = view(await row(id, product));
-    return p && p.active ? p : null;
+    if (p && p.active) return p;
+    const rows = A.roles ? await A.roles(id) : [];
+    if (isStaff((rows ?? []).filter((r) => r.product === product || r.product === 'platform')))
+      return { id, plan: 'staff', since: null, until: Date.now() + 365 * 864e5, renews: false, customer: '', paid: 0, source: 'staff', active: true };
+    return null;
   }
 
   // ---- one Stripe event: started, renewed, changed or ended. Each event is used once. ----
@@ -108,7 +114,7 @@ export function makeBilling({ cfg, pb, A, fetchImpl = fetch }) {
     const cur = view(await row(userId, c.product));
     const f = new URLSearchParams({ mode: 'subscription', client_reference_id: userId, 'metadata[uid]': userId, 'metadata[plan]': planId, 'metadata[game]': c.product,
       'subscription_data[metadata][uid]': userId, 'subscription_data[metadata][plan]': planId, 'subscription_data[metadata][game]': c.product,
-      'line_items[0][quantity]': '1', success_url: `${c.home}/?pass=ok`, cancel_url: `${c.home}/?pass=cancel` });
+      'line_items[0][quantity]': '1', allow_promotion_codes: 'true', success_url: `${c.home}/?pass=ok`, cancel_url: `${c.home}/?pass=cancel` });
     // the product made in Stripe's catalog when its Price ID is set; otherwise the same plan described inline
     if (pl.price) f.set('line_items[0][price]', pl.price);
     else for (const [k, v] of Object.entries({ currency: 'usd', unit_amount: String(pl.cents), 'recurring][interval': pl.interval, 'recurring][interval_count': String(pl.count || 1),
