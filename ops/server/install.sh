@@ -4,6 +4,7 @@
 #   - nightly backups of every product (03:30 UTC) and a weekly restore drill (Sundays 04:30 UTC), as systemd timers
 #   - memory and CPU ceilings for each service, so one runaway process can't starve the others or the server
 #   - a cap on the system log's disk use
+#   - Uptime Kuma (status page) and Umami (visitor stats), see monitoring.sh
 # Safe to run again: every step replaces what the last run made.
 set -euo pipefail
 OPS=/opt/novenique/ops BK=/var/backups/novenique
@@ -64,10 +65,17 @@ limit palasora-api 1536 100
 limit palasora-web 1536 100
 limit palasora-worker 2048 50
 limit agent-grand-prix 512 100
+limit jisst-chat 1024 100
+limit jisst-gateway 512 100
+limit jisst-calls 1024 100
 
 # ---- system log: at most 500 MB on disk ----
 sudo mkdir -p /etc/systemd/journald.conf.d
 printf '[Journal]\nSystemMaxUse=500M\n' | sudo tee /etc/systemd/journald.conf.d/novenique.conf >/dev/null
 sudo systemctl restart systemd-journald
+
+# ---- status page and visitor stats ----
+OWNER_PASSWORD=''; if [ -f /tmp/novenique-owner.env ]; then OWNER_PASSWORD=$(sed -n 's/^OWNER_PASSWORD=//p' /tmp/novenique-owner.env); rm -f /tmp/novenique-owner.env; fi
+PUBLIC_IP="${PUBLIC_IP:-}" OWNER_PASSWORD="$OWNER_PASSWORD" bash "$OPS/server/monitoring.sh" || echo "::warning::The status page or visitor stats did not finish installing."
 
 systemctl list-timers novenique-* --no-pager | head -5

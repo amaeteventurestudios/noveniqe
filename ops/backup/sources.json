@@ -18,6 +18,15 @@
       "copy": ["/etc/novenique", "/etc/palasora-novenique.env"]
     },
     {
+      "name": "jisst",
+      "copy": ["/var/lib/jisst/snapshot", "/etc/jisst.env", "/etc/jisst-tuwunel.toml", "/etc/jisst-livekit.yaml"]
+    },
+    {
+      "name": "monitoring",
+      "sqlite": ["/var/lib/uptime-kuma/kuma.db"],
+      "copy": ["/var/backups/novenique-umami/umami.sql.gz", "/etc/novenique/umami.env"]
+    },
+    {
       "name": "web-server",
       "copy": ["/etc/caddy", "/var/lib/private/caddy"]
     }
