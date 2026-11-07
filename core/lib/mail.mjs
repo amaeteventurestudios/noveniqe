@@ -29,7 +29,7 @@ export async function sendCode(mail, to, code, brand, from = mail.from) {
     const m = from.match(/^(.*)<(.+)>$/);
     const r = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST', headers: { 'api-key': mail.brevoKey, 'content-type': 'application/json' },
-      body: JSON.stringify({ sender: { name: (m?.[1] ?? 'Novenique').trim(), email: (m?.[2] ?? from).trim() }, to: [{ email: to }], subject, textContent: text, htmlContent: html }),
+      body: JSON.stringify({ sender: { name: (m?.[1] ?? 'Noveniqe').trim(), email: (m?.[2] ?? from).trim() }, to: [{ email: to }], subject, textContent: text, htmlContent: html }),
       signal: AbortSignal.timeout(10_000),
     });
     return r.ok;
