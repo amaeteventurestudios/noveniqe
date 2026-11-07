@@ -1,4 +1,6 @@
-# Novenique Core: one account for every game
+# Onyx accounts (Novenique Core): one account for every game
+
+Part of Onyx, the Noveniqe platform (see the [main README](../README.md)).
 
 Core runs the accounts site (accounts.noveniqe.com, spare address accounts.129-146-26-28.sslip.io). People sign in
 there once and play both Agent Grand Prix and Palasora under one user id. Each game keeps its own brand and its own
