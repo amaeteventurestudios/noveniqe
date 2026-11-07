@@ -55,7 +55,8 @@ jobs:
           PB_ADMIN_PASSWORD: ${{ secrets.SAVVYME_ADMIN_PASSWORD }}
         run: |
           set -euo pipefail
-          tar czf "$RUNNER_TEMP/savvyme.tgz" index.html home.css home.js favicon.svg site.webmanifest robots.txt shared start app vendor server/pb_migrations server/pb_hooks
+          # everything a visitor may load; repo-only folders stay behind (server/ is moved out of the web folder on the server)
+          tar czf "$RUNNER_TEMP/savvyme.tgz" --exclude=./.git --exclude=./.github --exclude=./docs --exclude=./tools --exclude='./*.md' .
           scp -i "$K" -o StrictHostKeyChecking=accept-new "$RUNNER_TEMP/savvyme.tgz" "$U@$H:/tmp/"
           # the admin sign-in rides in on the script's first lines, quoted, so it never shows in the log or the command line
           { printf 'export PB_ADMIN_EMAIL=%q PB_ADMIN_PASSWORD=%q\n' "$PB_ADMIN_EMAIL" "$PB_ADMIN_PASSWORD"; cat server/install.sh; } \
