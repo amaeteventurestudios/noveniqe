@@ -1,5 +1,5 @@
 // The few screens people see on the accounts site. Plain server-rendered HTML, no scripts, phone first, light and dark.
-// Each sign-in screen wears the game's name and colour; the Novenique name stays small (one account for every game).
+// Each sign-in screen wears the game's name and colour; the shared core's name never shows (one account for every game).
 import { esc } from './util.mjs';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -21,8 +21,8 @@ button.quiet,.btn.quiet{background:transparent;color:var(--ink);border-color:var
 ul.list{list-style:none;padding:0;margin:0 0 16px}ul.list li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 ul.list li form button{margin:0;width:auto;padding:6px 12px;font-size:14px}h2{font-size:18px;margin:28px 0 8px}code{word-break:break-all}
 footer{margin-top:20px;text-align:center}footer a{color:var(--muted);font-size:14px}a{color:var(--brand)}
-</style></head><body><main><div class="brand"><span class="dot" aria-hidden="true"></span>${esc(brand ?? 'Novenique')}</div><div class="card">${body}</div>
-<footer>${back ? `<a href="${esc(back)}">Back to ${esc(brand)}</a>` : '<span class="muted">Novenique accounts</span>'}</footer></main></body></html>`;
+</style></head><body><main><div class="brand"><span class="dot" aria-hidden="true"></span>${esc(brand ?? 'Noveniqe')}</div><div class="card">${body}</div>
+<footer>${back ? `<a href="${esc(back)}">Back to ${esc(brand)}</a>` : '<span class="muted">Noveniqe accounts</span>'}</footer></main></body></html>`;
 }
 
 const hidden = (csrf) => `<input type="hidden" name="csrf" value="${esc(csrf)}">`;
@@ -30,7 +30,7 @@ const err = (e) => (e ? `<p class="err" role="alert">${esc(e)}</p>` : '');
 
 export function chooser({ client, csrf, google, mail, error, email = '' }) {
   return layout({ title: `Sign in to ${client.name}`, brand: client.name, color: client.color, back: client.home, body: `
-<h1>Sign in to ${esc(client.name)}</h1><p class="muted">With your Novenique account: one account for Agent Grand Prix and Palasora.</p>${err(error)}
+<h1>Sign in to ${esc(client.name)}</h1><p class="muted">Use your Google account, or get a sign-in code by email.</p>${err(error)}
 ${google ? '<a class="btn" href="/google/start">Continue with Google</a>' : ''}
 ${google && mail ? '<div class="or">or</div>' : ''}
 ${mail ? `<form method="post" action="/email/start">${hidden(csrf)}<label for="email">Email</label>
@@ -50,14 +50,14 @@ export function codeEntry({ client, csrf, masked, error }) {
 
 export function mergeChoice({ client, csrf, who }) {
   return layout({ title: 'Add your guest progress', brand: client.name, color: client.color, back: client.home, body: `
-<h1>You already have an account</h1><p><strong>${esc(who)}</strong> already has a Novenique account. Add what you did as a guest in ${esc(client.name)} to it?</p>
+<h1>You already have an account</h1><p><strong>${esc(who)}</strong> already has an account. Add what you did as a guest in ${esc(client.name)} to it?</p>
 <form method="post" action="/merge">${hidden(csrf)}<input type="hidden" name="choice" value="merge"><button type="submit">Add my guest progress</button></form>
 <form method="post" action="/merge">${hidden(csrf)}<input type="hidden" name="choice" value="cancel"><button class="quiet" type="submit">Go back and stay a guest</button></form>` });
 }
 
 export function profileForm({ client, csrf, error, name = '', handle = '', action = '/profile', title = 'Choose your name' }) {
-  return layout({ title, brand: client?.name ?? 'Novenique', color: client?.color, back: client?.home, body: `
-<h1>${esc(title)}</h1><p class="muted">Your name and @handle are what other players see, in every Novenique game.</p>${err(error)}
+  return layout({ title, brand: client?.name ?? 'Noveniqe', color: client?.color, back: client?.home, body: `
+<h1>${esc(title)}</h1><p class="muted">Your name and @handle are what other players see.</p>${err(error)}
 <form method="post" action="${esc(action)}">${hidden(csrf)}<label for="name">Name</label>
 <input id="name" name="display_name" maxlength="40" required autocomplete="nickname" value="${esc(name)}">
 <label for="handle">@handle</label><input id="handle" name="handle" maxlength="30" required pattern="[a-z0-9_]{3,30}" autocapitalize="none" autocomplete="username" value="${esc(handle)}">
@@ -65,7 +65,7 @@ export function profileForm({ client, csrf, error, name = '', handle = '', actio
 }
 
 export function message({ title, text, client, link }) {
-  return layout({ title, brand: client?.name ?? 'Novenique', color: client?.color, back: client?.home, body: `<h1>${esc(title)}</h1><p>${esc(text)}</p>${link ? `<a class="btn" href="${esc(link.href)}">${esc(link.label)}</a>` : ''}` });
+  return layout({ title, brand: client?.name ?? 'Noveniqe', color: client?.color, back: client?.home, body: `<h1>${esc(title)}</h1><p>${esc(text)}</p>${link ? `<a class="btn" href="${esc(link.href)}">${esc(link.label)}</a>` : ''}` });
 }
 
 export function mfaStep({ csrf, error }) {
@@ -76,7 +76,7 @@ export function mfaStep({ csrf, error }) {
 
 export function account({ user, csrf, methods, sessions, roles, staff, mfa, notice, error, setup }) {
   const li = (a, b) => `<li><span>${a}</span>${b ?? ''}</li>`;
-  return layout({ title: 'Your Novenique account', body: `<h1>${esc(user.display_name || 'Your account')}</h1>
+  return layout({ title: 'Your account', body: `<h1>${esc(user.display_name || 'Your account')}</h1>
 <p class="muted">${user.handle ? '@' + esc(user.handle) : 'No @handle yet'}</p>${notice ? `<p class="ok" role="status">${esc(notice)}</p>` : ''}${err(error)}
 <h2>Name and @handle</h2><form method="post" action="/account/profile">${hidden(csrf)}<label for="name">Name</label><input id="name" name="display_name" maxlength="40" required value="${esc(user.display_name)}">
 <label for="handle">@handle</label><input id="handle" name="handle" maxlength="30" pattern="[a-z0-9_]{3,30}" required value="${esc(user.handle)}"><p class="muted" style="margin-top:8px">You can change your @handle once every 30 days. Your old one stays reserved for you for 30 days.</p><button type="submit">Save</button></form>

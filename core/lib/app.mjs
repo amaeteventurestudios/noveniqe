@@ -22,7 +22,7 @@ import { PRODUCTS, ROLES, permsOf, isStaff, checkRoleChange } from './roles.mjs'
 import { EMAIL_RE, body, challengeOf, cookies, limited, maskEmail, same, seal, setCookie, sha, sign, sixDigits, token, unsign, unseal } from './util.mjs';
 
 const FLOW = 'nv_flow';
-const SELF = { id: '_self', name: 'Novenique', color: '#3D5AFE', home: null, product: 'platform' };
+const SELF = { id: '_self', name: 'Noveniqe', color: '#3D5AFE', home: null, product: 'platform' };
 const FLOW_MINUTES = 30;
 
 export function makeCore(cfg, deps = {}) {
@@ -138,7 +138,7 @@ export function makeCore(cfg, deps = {}) {
   // ---------- routes ----------
   async function authorize(req, res, url) {
     const p = url.searchParams, client = cfg.clients[p.get('client_id')];
-    if (!client) return send(res, 400, P.message({ title: 'Unknown game', text: 'This sign-in link is not from a Novenique game.' }));
+    if (!client) return send(res, 400, P.message({ title: 'Unknown game', text: 'This sign-in link is not one we recognise.' }));
     const redirect = p.get('redirect_uri') ?? '';
     if (!client.redirect_uris.includes(redirect)) return send(res, 400, P.message({ title: 'Wrong return address', text: 'This sign-in link does not match the game. Go back and try again.', client }));
     const back = (error) => { const u = new URL(redirect); u.searchParams.set('error', error); if (p.get('state')) u.searchParams.set('state', p.get('state')); return go(res, u.toString()); };
