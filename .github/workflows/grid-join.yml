@@ -23,6 +23,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/onyx, ref: main }
+      - uses: actions/checkout@v4
+        with: { path: desk, sparse-checkout: .github/grid }
       - name: Connect
         env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
         run: bash ops/ci/ssh-setup.sh
@@ -41,4 +44,4 @@ jobs:
             [ -n "$PUBKEY" ] || { echo '::error::Paste one public key line (ssh-ed25519 AAAA...).'; exit 1; }
           fi
           # The auth key travels on stdin, never on a command line the server could log.
-          { printf '%s\n' "${TS_AUTHKEY:-}"; cat .github/grid/server.sh; } | $SSH "sudo ACTION='$ACTION' PUBKEY='${PUBKEY:-}' bash -c 'read -r TS_AUTHKEY; export TS_AUTHKEY; bash -s'" | tee -a "$GITHUB_STEP_SUMMARY"
+          { printf '%s\n' "${TS_AUTHKEY:-}"; cat desk/.github/grid/server.sh; } | $SSH "sudo ACTION='$ACTION' PUBKEY='${PUBKEY:-}' bash -c 'read -r TS_AUTHKEY; export TS_AUTHKEY; bash -s'" | tee -a "$GITHUB_STEP_SUMMARY"

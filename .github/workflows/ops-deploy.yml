@@ -1,4 +1,5 @@
-# Puts Novenique's server safety pieces on the shared server whenever ops/ changes on main: nightly backups, the weekly
+# Puts Onyx's server safety pieces (repo amaeteventurestudios/onyx, ops/) on the shared server whenever onyx's main
+# changes (checked every 30 minutes; "Run workflow" deploys straight away): nightly backups, the weekly
 # restore drill, memory and CPU ceilings per service, and a cap on log size (ops/server/install.sh). Then it takes a first
 # backup and drills it, so you can see the result in the run's summary. It also installs the status page (Uptime Kuma)
 # and visitor stats (Umami), see ops/server/monitoring.sh.
@@ -7,10 +8,11 @@
 # and OWNER_PASSWORD (a password of your choice): it opens the status page and is the visitor stats' admin password.
 name: Server safety (deploy)
 on:
+  schedule: [{ cron: '23,53 * * * *' }]   # the code lives in amaeteventurestudios/onyx: deploy when its main changed
+  workflow_dispatch:
   push:
     branches: [main]
-    paths: ['ops/**', '.github/workflows/ops-deploy.yml']
-  workflow_dispatch:
+    paths: ['.github/workflows/ops-deploy.yml']
 concurrency: server-ops
 jobs:
   deploy:
@@ -18,12 +20,22 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Test the backup tool
-        run: python3 -m unittest discover -s ops/backup -v
+        with: { repository: amaeteventurestudios/onyx, ref: main }
       - name: Connect
         env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
         run: bash ops/ci/ssh-setup.sh
+      - name: Anything new in onyx?
+        env: { EVENT: '${{ github.event_name }}' }
+        run: |
+          sha=$(git rev-parse HEAD); now=$($SSH 'cat /opt/novenique/ONYX_OPS_SHA 2>/dev/null' || true)
+          echo "SHA=$sha" >> "$GITHUB_ENV"
+          if [ "$now" = "$sha" ] && [ "$EVENT" = schedule ]; then echo "server safety from onyx $sha is already on the server."; echo 'GO=0' >> "$GITHUB_ENV"
+          else echo "Deploying server safety from onyx $sha (on the server: ${now:-not recorded yet})"; echo 'GO=1' >> "$GITHUB_ENV"; fi
+      - name: Test the backup tool
+        if: env.GO == '1'
+        run: python3 -m unittest discover -s ops/backup -v
       - name: Install on the server
+        if: env.GO == '1'
         env: { OWNER_PASSWORD: '${{ secrets.OWNER_PASSWORD }}' }
         run: |
           set -euo pipefail
@@ -32,7 +44,9 @@ jobs:
           # the password travels inside the ssh connection, never on a command line
           [ -z "$OWNER_PASSWORD" ] || printf 'OWNER_PASSWORD=%s\n' "$OWNER_PASSWORD" | $SSH 'umask 077; cat > /tmp/novenique-owner.env'
           $SSH "PUBLIC_IP=${DEST#*@} bash -s" < ops/server/install.sh
+          $SSH "sudo mkdir -p /opt/novenique && echo $SHA | sudo tee /opt/novenique/ONYX_OPS_SHA >/dev/null"
       - name: First backup and restore drill
+        if: env.GO == '1'
         run: |
           set -euo pipefail
           $SSH 'sudo systemctl start novenique-backup.service && sudo systemctl start novenique-drill.service'
