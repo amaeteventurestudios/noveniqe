@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/onyx, ref: main }
       - name: Connect
         env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
         run: bash ops/ci/ssh-setup.sh

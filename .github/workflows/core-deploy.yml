@@ -1,5 +1,5 @@
-# Puts Novenique Core (accounts for every Novenique game) on the shared server whenever core/ changes on main, after its
-# tests pass against PocketBase and Palasora's real database schema (core/deploy/install.sh).
+# Puts Onyx accounts (Novenique Core in code; repo amaeteventurestudios/onyx, core/) on the shared server whenever onyx's
+# main changes (checked every 30 minutes; "Run workflow" deploys straight away), after its tests pass against PocketBase and Palasora's real database schema (core/deploy/install.sh).
 # Uses the same three secrets as the server safety deploy: SERVER_HOST, SERVER_USER, SERVER_SSH_KEY.
 # Optional secrets, each turns a sign-in method on (Core works with neither: players stay guests until one is set):
 #   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET   "Continue with Google"
@@ -9,10 +9,11 @@
 #   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET the pass in every game (without them Core uses Agent Grand Prix's, already on the server)
 name: Accounts service (deploy)
 on:
+  schedule: [{ cron: '11,41 * * * *' }]   # the code lives in amaeteventurestudios/onyx: deploy when its main changed
+  workflow_dispatch:
   push:
     branches: [main]
-    paths: ['core/**', '.github/workflows/core-deploy.yml']
-  workflow_dispatch:
+    paths: ['.github/workflows/core-deploy.yml']
 concurrency: server-core
 jobs:
   deploy:
@@ -20,21 +21,34 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/onyx, ref: main }
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Anything new in onyx?
+        env: { EVENT: '${{ github.event_name }}' }
+        run: |
+          sha=$(git rev-parse HEAD); now=$($SSH 'cat /opt/novenique/ONYX_CORE_SHA 2>/dev/null' || true)
+          echo "SHA=$sha" >> "$GITHUB_ENV"
+          if [ "$now" = "$sha" ] && [ "$EVENT" = schedule ]; then echo "the accounts service from onyx $sha is already on the server."; echo 'GO=0' >> "$GITHUB_ENV"
+          else echo "Deploying the accounts service from onyx $sha (on the server: ${now:-not recorded yet})"; echo 'GO=1' >> "$GITHUB_ENV"; fi
       - uses: actions/checkout@v4
+        if: env.GO == '1'
         with: { repository: amaeteventurestudios/palasora, path: palasora, sparse-checkout: services/pocketbase/pb_migrations }
       - uses: actions/setup-node@v4
+        if: env.GO == '1'
         with: { node-version: '22' }
       - name: PocketBase for the tests
+        if: env.GO == '1'
         run: |
           curl -fsSL -o pb.zip https://github.com/pocketbase/pocketbase/releases/download/v0.40.5/pocketbase_0.40.5_linux_amd64.zip
           unzip -oq pb.zip pocketbase -d /tmp && chmod +x /tmp/pocketbase
       - name: Test
+        if: env.GO == '1'
         working-directory: core
         run: PB_BIN=/tmp/pocketbase PB_MIGRATIONS=$GITHUB_WORKSPACE/palasora/services/pocketbase/pb_migrations npm test
-      - name: Connect
-        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
-        run: bash ops/ci/ssh-setup.sh
       - name: Install on the server
+        if: env.GO == '1'
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -57,7 +71,9 @@ jobs:
           $SCP keys.env "$DEST:/tmp/novenique-core-keys.env" && rm -f keys.env
           HOST_IP=$($SSH 'curl -fsS -m 10 https://api.ipify.org || hostname -I | cut -d" " -f1')
           $SSH "chmod 600 /tmp/novenique-core-keys.env; HOST_IP=$HOST_IP bash -s" < core/deploy/install.sh | tee -a "$GITHUB_STEP_SUMMARY"
+          $SSH "sudo mkdir -p /opt/novenique && echo $SHA | sudo tee /opt/novenique/ONYX_CORE_SHA >/dev/null"
       - name: Answers from outside
+        if: env.GO == '1'
         run: |
           set -euo pipefail
           ip=$($SSH 'curl -fsS -m 10 https://api.ipify.org')

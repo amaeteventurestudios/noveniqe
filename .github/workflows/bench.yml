@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/onyx, ref: main }
       - uses: actions/checkout@v4
         with: { repository: amaeteventurestudios/agent-grand-prix-, path: agp }
       - uses: actions/setup-node@v4
