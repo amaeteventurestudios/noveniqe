@@ -73,9 +73,8 @@
       "product": "jisst",
       "guests": false,
       "color": "#BF4D2B",
-      "home": "https://app.jisste.noveniqe.com",
+      "home": "https://jisste.noveniqe.com",
       "redirect_uris": [
-        "https://app.jisste.noveniqe.com/auth/novenique/callback",
         "https://jisste.noveniqe.com/auth/novenique/callback",
         "https://jisste.com/auth/novenique/callback",
         "https://www.jisste.com/auth/novenique/callback",
