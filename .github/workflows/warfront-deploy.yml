@@ -1,0 +1,87 @@
+# Puts Agent Warfront (the tank war game, repo amaeteventurestudios/agent-warfront) on the shared server, using the
+# server secrets this repo already has, so the game repo needs none. Every 30 minutes it looks at the game repo's main
+# branch and deploys it when it changed since the last deploy; "Run workflow" deploys straight away. The work itself is
+# the game repo's deploy/install.sh: the built game (vite dist/) behind the shared Caddy, plus the private-room
+# matchmaking server (WebSocket signaling) on 127.0.0.1:8420, reached at /api/signal.
+# The game repo must be public for this checkout, or set the secret WARFRONT_TOKEN (a read-only token for that repo).
+# Optional variable in this repo: WARFRONT_DOMAIN (e.g. agentwarfront.com once bought and pointed at the server);
+# warfront.<ip>.sslip.io always works.
+name: Agent Warfront (deploy)
+on:
+  schedule: [{ cron: '12,42 * * * *' }]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/warfront-deploy.yml']
+concurrency: deploy-warfront
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: amaeteventurestudios/agent-warfront
+          ref: main
+          token: ${{ secrets.WARFRONT_TOKEN || github.token }}
+      - name: Server login
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: |
+          set -euo pipefail
+          k="$RUNNER_TEMP/k"; install -m 600 /dev/null "$k"; printf '%s\n' "$KEY" | tr -d '\r' | sed -n '/-----BEGIN/,/-----END/p' > "$k"
+          h=$(printf '%s' "$HOST" | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}|[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+' | tail -1)
+          u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
+          { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; echo "SPARE=warfront.$(printf '%s' "$h" | tr . -).sslip.io"; } >> "$GITHUB_ENV"
+      - name: Anything new?
+        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.WARFRONT_DOMAIN }}' }
+        run: |
+          sha=$(git rev-parse HEAD)
+          now=$(ssh -i "$K" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$U@$H" 'cat /opt/agent-warfront-deployed 2>/dev/null' || true)
+          names=""
+          for d in $DOMAIN; do
+            # a name goes into Caddy only once its DNS points here (Caddy can't get a certificate before that)
+            dns=$(getent ahostsv4 "$d" | awk 'NR==1{print $1}' || true)
+            if [ "$dns" = "$H" ]; then names="$names $d"; else echo "::notice::$d doesn't point at the server yet; skipping it."; fi
+          done
+          has=$(ssh -i "$K" "$U@$H" "cat /etc/caddy/sites/agent-warfront.caddy 2>/dev/null | head -1" || true)
+          for d in $names; do case "$has" in *"$d"*) ;; *) now="domain-new";; esac; done
+          echo "NAMES=${names# }" >> "$GITHUB_ENV"
+          if [ "$now" = "$sha" ] && [ "$EVENT" = schedule ]; then echo "Agent Warfront $sha is already on the server."; echo 'GO=0' >> "$GITHUB_ENV"
+          else echo "Deploying agent-warfront $sha (on the server: ${now:-nothing yet})"; { echo 'GO=1'; echo "SHA=$sha"; } >> "$GITHUB_ENV"; fi
+      - uses: actions/setup-node@v4
+        if: env.GO == '1'
+        with: { node-version: 22 }
+      - name: Build the game
+        if: env.GO == '1'
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run build
+          # the signaling server and its one dependency (ws), nothing else from node_modules
+          mkdir -p "$RUNNER_TEMP/sig/server" "$RUNNER_TEMP/sig/src/net" "$RUNNER_TEMP/sig/node_modules"
+          cp server/signalingServer.js server/roomStore.js "$RUNNER_TEMP/sig/server/"
+          cp src/net/protocol.js "$RUNNER_TEMP/sig/src/net/"
+          cp -r node_modules/ws "$RUNNER_TEMP/sig/node_modules/"
+          echo '{"type":"module","private":true}' > "$RUNNER_TEMP/sig/package.json"
+          tar czf "$RUNNER_TEMP/agent-warfront.tgz" -C dist .
+          tar czf "$RUNNER_TEMP/agent-warfront-signal.tgz" -C "$RUNNER_TEMP/sig" .
+          du -sh "$RUNNER_TEMP"/agent-warfront*.tgz
+      - name: Copy to the server and install
+        if: env.GO == '1'
+        run: |
+          set -euo pipefail
+          scp -i "$K" -o StrictHostKeyChecking=accept-new "$RUNNER_TEMP/agent-warfront.tgz" "$RUNNER_TEMP/agent-warfront-signal.tgz" "$U@$H:/tmp/"
+          ssh -i "$K" "$U@$H" "WARFRONT_DOMAIN='$NAMES' SPARE='$SPARE' bash -s" < deploy/install.sh
+          ssh -i "$K" "$U@$H" "echo $SHA | sudo tee /opt/agent-warfront-deployed >/dev/null"
+      - name: Check the game answers
+        if: env.GO == '1'
+        run: |
+          rm -f "$K"
+          ok=0
+          for n in $NAMES "$SPARE"; do
+            up=0
+            for i in $(seq 1 9); do curl -fsS -m 15 -o /dev/null "https://$n/" && { up=1; break; }; sleep 10; done
+            if [ "$up" = 1 ]; then echo "OK: https://$n" | tee -a "$GITHUB_STEP_SUMMARY"; ok=1
+            else echo "::warning::https://$n doesn't answer yet (the first HTTPS certificate can take a minute)."; fi
+          done
+          [ "$ok" = 1 ] || { echo "::error::Agent Warfront doesn't answer from outside."; exit 1; }
