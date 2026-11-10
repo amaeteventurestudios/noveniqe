@@ -4,7 +4,7 @@
 # the game repo's deploy/install.sh: the built game (vite dist/) behind the shared Caddy, plus the private-room
 # matchmaking server (WebSocket signaling) on 127.0.0.1:8420, reached at /api/signal.
 # The game repo must be public for this checkout, or set the secret WARFRONT_TOKEN (a read-only token for that repo).
-# Optional variable in this repo: WARFRONT_DOMAIN (e.g. agentwarfront.com once bought and pointed at the server);
+# Optional variable in this repo: WARFRONT_DOMAIN (default warfront.noveniqe.com; added once its DNS points at the server);
 # warfront.<ip>.sslip.io always works.
 name: Agent Warfront (deploy)
 on:
@@ -33,7 +33,7 @@ jobs:
           u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
           { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; echo "SPARE=warfront.$(printf '%s' "$h" | tr . -).sslip.io"; } >> "$GITHUB_ENV"
       - name: Anything new?
-        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.WARFRONT_DOMAIN }}' }
+        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.WARFRONT_DOMAIN || ''warfront.noveniqe.com'' }}' }
         run: |
           sha=$(git rev-parse HEAD)
           now=$(ssh -i "$K" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$U@$H" 'cat /opt/agent-warfront-deployed 2>/dev/null' || true)
