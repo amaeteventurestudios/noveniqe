@@ -2,7 +2,8 @@
 # has, so the jisst repo needs none. Every 30 minutes it looks at the jisst repo's main branch and deploys it when it changed
 # since the last deploy; "Run workflow" deploys straight away. The work itself is the jisst repo's server/deploy.sh.
 # Optional variables in this repo (Settings > Secrets and variables > Actions > Variables):
-#   JISST_DOMAIN       the app's names, main one first (default jisste.noveniqe.com; jisste.<ip>.sslip.io is always added)
+#   JISST_DOMAIN       the app's names, main one first (default app.jisste.noveniqe.com; jisste.<ip>.sslip.io is always added)
+#   JISST_SITE_DOMAIN  the website's name (default jisste.noveniqe.com); anything there that isn't the website goes to the app
 #   JISST_SERVER_NAME  the end of every chat address (default jisste.com). Fixed for good once JISST_LAUNCHED is yes.
 #   JISST_LAUNCHED, JISST_OWNERS, JISST_LOCAL_AI, JISST_FEED_URL   as described in the jisst repo's deploy workflow
 name: Jisste (deploy)
@@ -46,7 +47,8 @@ jobs:
           HOST: ${{ secrets.SERVER_HOST }}
           USER: ${{ secrets.SERVER_USER }}
           KEY: ${{ secrets.SERVER_SSH_KEY }}
-          DOMAIN: ${{ vars.JISST_DOMAIN || 'jisste.noveniqe.com' }}
+          DOMAIN: ${{ vars.JISST_DOMAIN || 'app.jisste.noveniqe.com' }}
+          SITE: ${{ vars.JISST_SITE_DOMAIN || 'jisste.noveniqe.com' }}
           SERVER_NAME: ${{ vars.JISST_SERVER_NAME }}
           FEED: ${{ vars.JISST_FEED_URL }}
           LAUNCHED: ${{ vars.JISST_LAUNCHED }}
