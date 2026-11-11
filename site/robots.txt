@@ -1,3 +1,5 @@
 User-agent: *
 Allow: /
+
 Sitemap: https://noveniqe.com/sitemap.xml
+# A plain-text summary for AI assistants: https://noveniqe.com/llms.txt
