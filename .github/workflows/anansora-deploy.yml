@@ -1,7 +1,8 @@
 # Puts Anansora (the AI myth-world story game, repo amaeteventurestudios/anansora) on the shared server, using the
 # server secrets this repo already has. Every 30 minutes it looks at the game repo's main branch and deploys it when it
 # changed since the last deploy; "Run workflow" deploys straight away. The game is a static site: web/ becomes the site
-# root and engine/ sits beside it. The work on the server is the game repo's deploy/install.sh (shared Caddy, own site file).
+# root and engine/ sits beside it. The work on the server is the game repo's deploy/install.sh (shared Caddy, own site file,
+# and the free storyteller service from server/ in front of the free model Agent Grand Prix runs).
 # The anansora repo is private: secret ANANSORA_TOKEN is a fine-grained token with read-only Contents on it
 # (or make the repo public and no token is needed).
 # Optional variable in this repo: ANANSORA_DOMAIN (default anansora.noveniqe.com; added once its DNS points at the
@@ -50,12 +51,14 @@ jobs:
         with: { node-version: 22 }
       - name: Test the engine
         if: env.GO == '1'
-        run: node tools/test.mjs
+        run: node tools/test.mjs && { [ ! -f tools/story-test.mjs ] || node tools/story-test.mjs; }
       - name: Pack, copy to the server and install
         if: env.GO == '1'
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/site" && cp -r web/. "$RUNNER_TEMP/site/" && cp -r engine "$RUNNER_TEMP/site/engine"
+          # the free storyteller (server/story.mjs); install.sh moves it out of the web folder
+          if [ -d server ]; then cp -r server "$RUNNER_TEMP/site/_server"; fi
           tar czf "$RUNNER_TEMP/anansora.tgz" -C "$RUNNER_TEMP/site" .
           du -sh "$RUNNER_TEMP/anansora.tgz"
           scp -i "$K" -o StrictHostKeyChecking=accept-new "$RUNNER_TEMP/anansora.tgz" "$U@$H:/tmp/"
