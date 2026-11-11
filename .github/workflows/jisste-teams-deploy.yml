@@ -2,6 +2,7 @@
 # secrets this repo already has, so the jisste-teams repo needs none. Every 30 minutes it looks at that repo's main branch
 # and deploys it when it changed since the last deploy; "Run workflow" deploys straight away. The work itself is the
 # jisste-teams repo's server/deploy.sh. Optional variable in this repo (Settings > Secrets and variables > Actions > Variables):
+# The jisste-teams repo is private: secret JISSTE_TEAMS_TOKEN is a fine-grained token with read-only Contents on it.
 #   JISSTE_TEAMS_DOMAIN   the app's names, main one first (default teams.jisste.noveniqe.com; teams.<ip>.sslip.io is always added)
 name: Jisste Teams (deploy)
 on:
@@ -17,7 +18,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-        with: { repository: amaeteventurestudios/jisste-teams, ref: main }
+        with: { repository: amaeteventurestudios/jisste-teams, ref: main, token: '${{ secrets.JISSTE_TEAMS_TOKEN || github.token }}' }
       - name: Anything new?
         env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}', EVENT: '${{ github.event_name }}' }
         run: |
