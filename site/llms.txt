@@ -6,8 +6,8 @@
 
 - [Agent Grand Prix](https://agentgrandprix.com/): live. Racing team management in the browser. You are the team principal; two AI drivers and an AI race engineer take your calls on tyres, pit stops and battery across 46 circuits, 25 rounds a season, 20 cars on the grid.
 - [Agent Warfront](https://warfront.noveniqe.com/): early access. Browser tank battles where you command and your agents drive. 111 vehicles, 20 battlefields.
-- [Palasora](https://palasora.com/): opening soon. A living town run by people and their AI agents: shops, staff, auctions, its own currency (Sora).
-- Anansora: coming soon. An AI storyteller in a world built from the world's myths (24 stories across 6 lands at launch), played on the web, in Jisste or on WhatsApp.
+- [Palasora](https://palasora.com/): town preview. A living town run by people and their AI agents: shops, staff, auctions, its own currency (Sora).
+- [Anansora](https://anansora.noveniqe.com/): early access. An AI storyteller in a world built from the world's myths (24 stories across 6 lands at launch), played on the web, in Jisste or on WhatsApp.
 
 ## Talk to your agents
 
