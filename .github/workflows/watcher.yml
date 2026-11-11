@@ -1,0 +1,50 @@
+# Puts the security watcher on the shared server, with no terminal. It only looks: every 15 seconds it records which
+# programs run, which ports are open and every connection in and out, signs the report and sends it to the console.
+# It never blocks, stops or changes anything on the server by itself, and it touches no site or service.
+#
+#   1. In the console (vigilantyx.umanahsystems.com), open Devices, then Add a device, and copy the one-day code.
+#   2. Here: Run workflow, action "install", paste the code. The server shows up in the console within a minute.
+#
+# "status" shows whether the watcher runs. "remove" takes it off again.
+name: Security watcher (server)
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [status, install, remove]
+        default: status
+      code:
+        description: 'install only: the one-day code from the console'
+        required: false
+concurrency: server-ops
+jobs:
+  watcher:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/onyx, ref: main }
+      - name: Connect
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: bash ops/ci/ssh-setup.sh
+      - name: Run
+        env:
+          ACTION: ${{ inputs.action }}
+          CODE: ${{ inputs.code }}
+          CONSOLE: ${{ vars.VIGILANTYX_URL || 'https://vigilantyx.umanahsystems.com' }}
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            install)
+              CODE=$(printf '%s' "$CODE" | tr -d '[:space:]')
+              [ -n "$CODE" ] || { echo '::error::Paste the one-day code from the console (Devices, Add a device) into "code".'; exit 1; }
+              echo "::add-mask::$CODE"
+              case "$CODE" in *[!A-Za-z0-9_-]*) echo '::error::That code has characters a console code never has. Copy it again.'; exit 1 ;; esac
+              $SSH "curl -fsSL $CONSOLE/api/devices/install.sh -o /tmp/vx-install.sh && sudo sh /tmp/vx-install.sh $CODE; rm -f /tmp/vx-install.sh" | tee -a "$GITHUB_STEP_SUMMARY"
+              ;;
+            remove)
+              $SSH 'sudo systemctl disable --now vigilantyx-agent 2>/dev/null || true; sudo rm -f /etc/systemd/system/vigilantyx-agent.service /usr/local/bin/vigilantyx-agent; sudo rm -rf /etc/vigilantyx-agent; sudo systemctl daemon-reload; echo "The watcher is off this server."' | tee -a "$GITHUB_STEP_SUMMARY"
+              ;;
+          esac
+          $SSH 'if systemctl is-active --quiet vigilantyx-agent; then echo "Watcher: running since $(systemctl show -p ActiveEnterTimestamp --value vigilantyx-agent)"; else echo "Watcher: not running"; fi' | tee -a "$GITHUB_STEP_SUMMARY"
