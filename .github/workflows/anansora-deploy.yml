@@ -1,0 +1,75 @@
+# Puts Anansora (the AI myth-world story game, repo amaeteventurestudios/anansora) on the shared server, using the
+# server secrets this repo already has. Every 30 minutes it looks at the game repo's main branch and deploys it when it
+# changed since the last deploy; "Run workflow" deploys straight away. The game is a static site: web/ becomes the site
+# root and engine/ sits beside it. The work on the server is the game repo's deploy/install.sh (shared Caddy, own site file).
+# The anansora repo is private: secret ANANSORA_TOKEN is a fine-grained token with read-only Contents on it
+# (or make the repo public and no token is needed).
+# Optional variable in this repo: ANANSORA_DOMAIN (default anansora.noveniqe.com; added once its DNS points at the
+# server); anansora.<ip>.sslip.io always works.
+name: Anansora (deploy)
+on:
+  schedule: [{ cron: '17,47 * * * *' }]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/anansora-deploy.yml']
+concurrency: deploy-anansora
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: amaeteventurestudios/anansora, ref: main, token: '${{ secrets.ANANSORA_TOKEN || github.token }}' }
+      - name: Server login
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: |
+          set -euo pipefail
+          k="$RUNNER_TEMP/k"; install -m 600 /dev/null "$k"; printf '%s\n' "$KEY" | tr -d '\r' | sed -n '/-----BEGIN/,/-----END/p' > "$k"
+          h=$(printf '%s' "$HOST" | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}|[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+' | tail -1)
+          u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
+          { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; echo "SPARE=anansora.$(printf '%s' "$h" | tr . -).sslip.io"; } >> "$GITHUB_ENV"
+      - name: Anything new?
+        env: { EVENT: '${{ github.event_name }}', DOMAIN: '${{ vars.ANANSORA_DOMAIN || ''anansora.noveniqe.com'' }}' }
+        run: |
+          sha=$(git rev-parse HEAD)
+          now=$(ssh -i "$K" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 "$U@$H" 'cat /opt/anansora-deployed 2>/dev/null' || true)
+          names=""
+          for d in $DOMAIN; do
+            # a name goes into Caddy only once its DNS points here (Caddy can't get a certificate before that)
+            dns=$(getent ahostsv4 "$d" | awk 'NR==1{print $1}' || true)
+            if [ "$dns" = "$H" ]; then names="$names $d"; else echo "::notice::$d doesn't point at the server yet; skipping it."; fi
+          done
+          has=$(ssh -i "$K" "$U@$H" "head -1 /etc/caddy/sites/anansora.caddy 2>/dev/null" || true)
+          for d in $names; do case "$has" in *"$d"*) ;; *) now="domain-new";; esac; done
+          echo "NAMES=${names# }" >> "$GITHUB_ENV"
+          if [ "$now" = "$sha" ] && [ "$EVENT" = schedule ]; then echo "Anansora $sha is already on the server."; echo 'GO=0' >> "$GITHUB_ENV"
+          else echo "Deploying anansora $sha (on the server: ${now:-nothing yet})"; { echo 'GO=1'; echo "SHA=$sha"; } >> "$GITHUB_ENV"; fi
+      - uses: actions/setup-node@v4
+        if: env.GO == '1'
+        with: { node-version: 22 }
+      - name: Test the engine
+        if: env.GO == '1'
+        run: node tools/test.mjs
+      - name: Pack, copy to the server and install
+        if: env.GO == '1'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/site" && cp -r web/. "$RUNNER_TEMP/site/" && cp -r engine "$RUNNER_TEMP/site/engine"
+          tar czf "$RUNNER_TEMP/anansora.tgz" -C "$RUNNER_TEMP/site" .
+          du -sh "$RUNNER_TEMP/anansora.tgz"
+          scp -i "$K" -o StrictHostKeyChecking=accept-new "$RUNNER_TEMP/anansora.tgz" "$U@$H:/tmp/"
+          ssh -i "$K" "$U@$H" "ANANSORA_NAMES='$NAMES' SPARE='$SPARE' bash -s" < deploy/install.sh
+          ssh -i "$K" "$U@$H" "echo $SHA | sudo tee /opt/anansora-deployed >/dev/null"
+      - name: Check the game answers
+        if: env.GO == '1'
+        run: |
+          rm -f "$K"
+          ok=0
+          for n in $NAMES "$SPARE"; do
+            up=0
+            for i in $(seq 1 9); do curl -fsS -m 15 -o /dev/null "https://$n/" && { up=1; break; }; sleep 10; done
+            if [ "$up" = 1 ]; then echo "OK: https://$n" | tee -a "$GITHUB_STEP_SUMMARY"; ok=1
+            else echo "::warning::https://$n doesn't answer yet (the first HTTPS certificate can take a minute)."; fi
+          done
+          [ "$ok" = 1 ] || { echo "::error::Anansora doesn't answer from outside."; exit 1; }
