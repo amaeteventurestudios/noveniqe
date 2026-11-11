@@ -3,18 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Noveniqe: games your AI agents play with you</title>
-<meta name="description" content="Noveniqe makes agentic games. You give the orders; your AI crew races, builds, fights and tells stories across every world.">
+<title>Noveniqe: agentic games where your AI agents play and you lead</title>
+<meta name="description" content="Noveniqe makes agentic games. You give the orders and your AI crew plays: race in Agent Grand Prix, command tanks in Agent Warfront, run a town in Palasora and live the world's myths in Anansora.">
 <meta name="theme-color" content="#07080a">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="author" content="Noveniqe">
 <link rel="canonical" href="https://noveniqe.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Noveniqe">
+<meta property="og:locale" content="en_US">
 <meta property="og:title" content="Noveniqe: your agents play, you lead">
 <meta property="og:description" content="Agentic games. You give the orders; your AI crew races, builds, fights and tells stories across every world.">
 <meta property="og:url" content="https://noveniqe.com/">
 <meta property="og:image" content="https://noveniqe.com/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Noveniqe: Your agents play. You lead. Agent Grand Prix, Agent Warfront, Palasora, Anansora.">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Noveniqe: your agents play, you lead">
+<meta name="twitter:description" content="Agentic games. You give the orders; your AI crew races, builds, fights and tells stories across every world.">
+<meta name="twitter:image" content="https://noveniqe.com/og.jpg">
+<meta name="twitter:image:alt" content="Noveniqe: Your agents play. You lead.">
+<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM summary">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","@id":"https://noveniqe.com/#org","name":"Noveniqe","url":"https://noveniqe.com/","logo":"https://noveniqe.com/icon.png","description":"Noveniqe makes agentic games: you give the orders and your AI agents play.","parentOrganization":{"@type":"Organization","name":"Amaete Venture Studios"}},
+{"@type":"WebSite","@id":"https://noveniqe.com/#site","url":"https://noveniqe.com/","name":"Noveniqe","publisher":{"@id":"https://noveniqe.com/#org"}},
+{"@type":"VideoGame","name":"Agent Grand Prix","url":"https://agentgrandprix.com/","genre":"Racing management","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}},
+{"@type":"VideoGame","name":"Agent Warfront","url":"https://warfront.noveniqe.com/","genre":"Tank strategy","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}},
+{"@type":"VideoGame","name":"Palasora","url":"https://palasora.com/","genre":"Town simulation","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}},
+{"@type":"VideoGame","name":"Anansora","genre":"Text adventure","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}}
+]}
+</script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307080a'/%3E%3Cpath d='M8 25V7l16 18V7' fill='none' stroke='%23ff6a1a' stroke-width='4.5' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -74,13 +96,13 @@ nav .btn{height:46px;padding:0 22px;font-size:15px}
 .slide img,.slide video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .slide.on img,.slide.on video{animation:kb 8s linear forwards}
 @keyframes kb{from{transform:scale(1.14) translateX(1.5%)}to{transform:scale(1.02) translateX(0)}}
-.hero::after{content:"";position:absolute;inset:0;z-index:3;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 45%,rgba(0,0,0,.85) 100%),linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,0) 65%);pointer-events:none}
+.hero::after{content:"";position:absolute;inset:0;z-index:3;background:linear-gradient(180deg,rgba(0,0,0,.6) 0%,rgba(0,0,0,.1) 22%,rgba(0,0,0,.25) 45%,rgba(0,0,0,.9) 100%),linear-gradient(90deg,rgba(0,0,0,.8) 0%,rgba(0,0,0,.55) 40%,rgba(0,0,0,0) 75%);pointer-events:none}
 .hero-c{position:absolute;z-index:5;left:var(--m);right:var(--m);bottom:clamp(110px,15vh,160px);display:grid;grid-template-columns:1fr auto;align-items:end;gap:40px}
-.hero h1{font-size:clamp(64px,10.4vw,188px)}
+.hero h1{font-size:clamp(64px,10.4vw,188px);text-shadow:0 4px 40px rgba(0,0,0,.45)}
 .hero h1 .ln{display:block;overflow:hidden;padding-bottom:.04em}
 .hero h1 .ln>span{display:inline-block}
 .hero h1 .ln:nth-child(2){color:var(--acc)}
-.hero p.sub{max-width:560px;font-size:clamp(17px,1.4vw,20px);margin:22px 0 30px;color:#e7e5df}
+.hero p.sub{text-shadow:0 1px 12px rgba(0,0,0,.6);max-width:560px;font-size:clamp(17px,1.4vw,20px);margin:22px 0 30px;color:#e7e5df}
 .cta{display:flex;flex-wrap:wrap;gap:12px}
 .worlds{display:flex;flex-direction:column;gap:6px;min-width:300px}
 .wbtn{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 16px;text-align:left;padding:14px 18px;border-radius:14px;background:rgba(0,0,0,.35);transition:background-color .3s,transform .3s var(--ease)}
