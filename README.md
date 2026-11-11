@@ -12,6 +12,7 @@ repository:
 | Accounts service (deploy) | Onyx accounts (`core/`), every 30 minutes when onyx's main changed | amaeteventurestudios/onyx |
 | Server safety (deploy) | backups, restore drill, limits, status page (`ops/`), same rule | amaeteventurestudios/onyx |
 | Jisste, SavvyMe, ISOTEH, Agent Warfront (deploy) | each app | its own repository |
+| Noveniqe website (deploy) | the company website at noveniqe.com, whenever `site/` changes on main | this repository (`site/`) |
 | Off-server backup, Server check, Uptime, Bench, Grant, Delete, Join the grid | checks and one-off jobs | amaeteventurestudios/onyx |
 
 "Run workflow" on any of them runs it straight away. To change Onyx itself, open a pull request in the onyx repo.
