@@ -1,0 +1,54 @@
+# Puts the Noveniqe website (site/ in this repo) on the shared server at noveniqe.com.
+# Runs when site/ or this file changes on main, and on "Run workflow".
+# Optional variable in this repo (Settings > Secrets and variables > Actions > Variables):
+#   SITE_DOMAIN  the website's names, main one first (default "noveniqe.com www.noveniqe.com"); the others redirect to the
+#                first. A name is only used once its DNS points at the server (Cloudflare: A record, DNS only, grey cloud).
+#                noveniqe.<server ip with dashes>.sslip.io always works as a spare address.
+name: Noveniqe website (deploy)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['site/**', 'deploy/site-install.sh', '.github/workflows/site-deploy.yml']
+concurrency: deploy-noveniqe-site
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Server details
+        env: { HOST: '${{ secrets.SERVER_HOST }}', USER: '${{ secrets.SERVER_USER }}', KEY: '${{ secrets.SERVER_SSH_KEY }}' }
+        run: |
+          set -euo pipefail
+          k="$RUNNER_TEMP/k"; install -m 600 /dev/null "$k"; printf '%s\n' "$KEY" | tr -d '\r' | sed -n '/-----BEGIN/,/-----END/p' > "$k"
+          h=$(printf '%s' "$HOST" | grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}|[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+' | tail -1)
+          u=$(printf '%s' "$USER" | grep -oE '[a-z_][a-z0-9_-]*' | tail -1 || true)
+          { echo "K=$k"; echo "H=$h"; echo "U=${u:-ubuntu}"; echo "SPARE=noveniqe.$(printf '%s' "$h" | tr . -).sslip.io"; } >> "$GITHUB_ENV"
+      - name: Which names point here
+        env: { DOMAIN: '${{ vars.SITE_DOMAIN || ''noveniqe.com www.noveniqe.com'' }}' }
+        run: |
+          names=""
+          for d in $DOMAIN; do
+            dns=$(getent ahostsv4 "$d" | awk 'NR==1{print $1}' || true)
+            if [ "$dns" = "$H" ]; then names="$names $d"; else echo "::notice::$d doesn't point at the server yet; skipping it."; fi
+          done
+          echo "NAMES=${names# }" >> "$GITHUB_ENV"
+      - name: Copy to the server and install
+        run: |
+          set -euo pipefail
+          tar czf "$RUNNER_TEMP/noveniqe-site.tgz" -C site .
+          du -sh "$RUNNER_TEMP/noveniqe-site.tgz"
+          scp -i "$K" -o StrictHostKeyChecking=accept-new "$RUNNER_TEMP/noveniqe-site.tgz" "$U@$H:/tmp/"
+          ssh -i "$K" "$U@$H" "SITE_NAMES='$NAMES' SPARE='$SPARE' bash -s" < deploy/site-install.sh
+      - name: Check the website answers
+        run: |
+          rm -f "$K"
+          ok=0
+          for n in $NAMES "$SPARE"; do
+            up=0
+            for i in $(seq 1 9); do curl -fsS -m 15 -o /dev/null "https://$n/" && { up=1; break; }; sleep 10; done
+            if [ "$up" = 1 ]; then echo "OK: https://$n" | tee -a "$GITHUB_STEP_SUMMARY"; ok=1
+            else echo "::warning::https://$n doesn't answer yet (the first HTTPS certificate can take a minute)."; fi
+          done
+          [ "$ok" = 1 ] || { echo "::error::The website doesn't answer from outside."; exit 1; }
