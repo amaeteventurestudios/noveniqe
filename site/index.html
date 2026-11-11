@@ -32,15 +32,18 @@
 {"@type":"VideoGame","name":"Agent Grand Prix","url":"https://agentgrandprix.com/","genre":"Racing management","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}},
 {"@type":"VideoGame","name":"Agent Warfront","url":"https://warfront.noveniqe.com/","genre":"Tank strategy","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}},
 {"@type":"VideoGame","name":"Palasora","url":"https://palasora.com/","genre":"Town simulation","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}},
-{"@type":"VideoGame","name":"Anansora","genre":"Text adventure","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}}
+{"@type":"VideoGame","name":"Anansora","url":"https://anansora.noveniqe.com/","genre":"Text adventure","gamePlatform":"Web browser","publisher":{"@id":"https://noveniqe.com/#org"}}
 ]}
 </script>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2307080a'/%3E%3Cpath d='M8 25V7l16 18V7' fill='none' stroke='%23ff6a1a' stroke-width='4.5' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="/icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/big-shoulders-display-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face{font-family:'Big Shoulders Display';font-style:normal;font-display:swap;font-weight:100 900;src:url(fonts/big-shoulders-display-latin-ext-wght-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Big Shoulders Display';font-style:normal;font-display:swap;font-weight:100 900;src:url(fonts/big-shoulders-display-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Inter';font-style:normal;font-display:swap;font-weight:100 900;src:url(fonts/inter-latin-ext-wght-normal.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Inter';font-style:normal;font-display:swap;font-weight:100 900;src:url(fonts/inter-latin-wght-normal.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 :root{
   --ground:#07080a; --ground2:#0e1014; --ground3:#161920; --ink:#f3f1ea; --ink2:#b9bcc4;
   --acc:#ff6a1a; --agp:#2f7bff; --agp2:#ff3b3b; --pal:#3fd0b4; --war:#f2a33a; --ana:#ff6a4d;
@@ -66,7 +69,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .tag{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:6px 14px 6px 10px;border-radius:999px;background:rgba(255,255,255,.1)}
 .tag i{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 0 0 currentColor;animation:pulse 1.8s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 60%,transparent)}100%{box-shadow:0 0 0 10px transparent}}
-.live{color:var(--acc)} .soon{color:#ffd166} .early{color:var(--war)}
+.live{color:var(--acc)} .pv{color:#ffd166} .early{color:var(--war)}
 
 /* progress + nav */
 #prog{position:fixed;top:0;left:0;height:3px;width:100%;background:var(--acc);transform-origin:0 50%;transform:scaleX(0);z-index:60}
@@ -287,7 +290,7 @@ nav .btn{height:46px;padding:0 22px;font-size:15px}
 .n span{display:block;margin-top:10px;font-weight:600;font-size:17px}
 
 /* NEXT WORLD */
-.next{position:relative;height:clamp(560px,90vh,820px);background:#000;overflow:hidden;display:grid;place-items:center;text-align:center}
+.next{position:relative;min-height:clamp(600px,90vh,860px);padding:80px 0;background:#000;overflow:hidden;display:grid;place-items:center;text-align:center}
 .next canvas{position:absolute;inset:0;width:100%;height:100%;opacity:.55}
 .next .scan{position:absolute;left:0;right:0;height:30%;background:linear-gradient(transparent,color-mix(in srgb,var(--acc) 12%,transparent),transparent);animation:scan 4s linear infinite}
 @keyframes scan{from{top:-30%}to{top:100%}}
@@ -404,6 +407,16 @@ footer{background:#000;padding:clamp(80px,9vw,130px) var(--m) 30px;overflow:hidd
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
   .track,.col{animation:none!important}
 }
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.join{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:560px;margin:26px auto 0}
+.join input{flex:1 1 260px;min-width:0;height:54px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:var(--ink);font:500 16px var(--text)}
+.join input:focus{outline:2px solid var(--acc);outline-offset:2px;border-color:transparent}
+.join input[aria-invalid=true]{border-color:#ff5a5a}
+.join .fine{flex-basis:100%;margin:6px 0 0;font-size:13px;color:var(--ink2)}
+.join .fine a{text-decoration:underline}
+.join.done input,.join.done button{display:none}
+.join.done .fine{font-size:17px;color:var(--ink)}
+.next .alt{display:inline-block;margin-top:18px;font-size:14px;color:var(--ink2);text-decoration:underline}
 </style>
 </head>
 <body>
@@ -431,7 +444,7 @@ footer{background:#000;padding:clamp(80px,9vw,130px) var(--m) 30px;overflow:hidd
 <!-- 1 HERO -->
 <section class="hero" aria-label="Noveniqe">
   <div class="slide on" data-c="var(--agp)"><img src="a/agp-hero.webp" alt="Agent Grand Prix cars racing at dusk"></div>
-  <div class="slide" data-c="var(--war)"><video src="a/desert-ground-rush-mobile.mp4" muted loop playsinline preload="metadata" poster="a/war-desert.webp"></video></div>
+  <div class="slide" data-c="var(--war)"><video src="a/desert-ground-rush-mobile.mp4" muted loop playsinline preload="none" poster="a/war-desert.webp"></video></div>
   <div class="slide" data-c="var(--pal)"><img src="a/pal-day.webp" alt="Palasora, a town run by people and their AI agents"></div>
   <div class="slide" data-c="var(--ana)"><img src="a/cov/mami-wata-bargain.webp" alt="Anansora story cover" style="object-position:50% 30%"></div>
 
@@ -447,8 +460,8 @@ footer{background:#000;padding:clamp(80px,9vw,130px) var(--m) 30px;overflow:hidd
     <div class="worlds rv" role="tablist" aria-label="Worlds">
       <button class="wbtn on" style="--c:var(--agp)"><strong>Agent Grand Prix</strong><em>Live</em><span class="bar"><b></b></span></button>
       <button class="wbtn" style="--c:var(--war)"><strong>Agent Warfront</strong><em>Early access</em><span class="bar"><b></b></span></button>
-      <button class="wbtn" style="--c:var(--pal)"><strong>Palasora</strong><em>Opening soon</em><span class="bar"><b></b></span></button>
-      <button class="wbtn" style="--c:var(--ana)"><strong>Anansora</strong><em>Coming soon</em><span class="bar"><b></b></span></button>
+      <button class="wbtn" style="--c:var(--pal)"><strong>Palasora</strong><em>Preview</em><span class="bar"><b></b></span></button>
+      <button class="wbtn" style="--c:var(--ana)"><strong>Anansora</strong><em>Early access</em><span class="bar"><b></b></span></button>
     </div>
   </div>
   <div class="scrollcue">Scroll</div>
@@ -519,7 +532,7 @@ footer{background:#000;padding:clamp(80px,9vw,130px) var(--m) 30px;overflow:hidd
 <section class="world w-pal" id="palasora">
   <div class="pal-grid">
     <div class="w-in">
-      <span class="tag soon rv"><i></i>Opening soon</span>
+      <span class="tag pv rv"><i></i>Town preview</span>
       <h2 class="d rv">Palasora</h2>
       <p class="line rv">A living town run by people and their AI agents. Your agent opens the shop, hires the staff and bids at auction. You decide what to build.</p>
       <div class="stats rv">
@@ -564,13 +577,14 @@ footer{background:#000;padding:clamp(80px,9vw,130px) var(--m) 30px;overflow:hidd
 <!-- 7 ANANSORA -->
 <section class="world w-ana" id="anansora">
   <div class="w-in">
-    <span class="tag soon rv" style="color:var(--ana)"><i></i>Coming soon</span>
+    <span class="tag early rv" style="color:var(--ana)"><i></i>Early access</span>
     <h2 class="d rv">Anansora</h2>
     <p class="line rv">An AI storyteller in a world built from the world's myths. Owe Anansi money, bargain with Mami Wata, ride a longship off the map. Play on the web, in Jisste or on WhatsApp.</p>
     <div class="stats rv">
-      <div class="stat"><b data-n="24">24</b><span>Stories at launch</span></div>
+      <div class="stat"><b data-n="24">24</b><span>Stories to play</span></div>
       <div class="stat"><b data-n="6">6</b><span>Lands of myth</span></div>
     </div>
+    <div class="cta rv"><a class="btn" href="https://anansora.noveniqe.com" style="background:var(--ana)">Play now <span class="ar">→</span></a></div>
   </div>
   <div class="cols" id="cols" aria-label="Anansora stories"></div>
 </section>
@@ -635,8 +649,14 @@ footer{background:#000;padding:clamp(80px,9vw,130px) var(--m) 30px;overflow:hidd
   <div class="c">
     <div class="lock rv"><svg viewBox="0 0 38 38" fill="none" style="stroke:var(--acc)" stroke-width="3"><rect x="7" y="17" width="24" height="17" rx="4"/><path d="M12 17v-5a7 7 0 0114 0v5"/></svg></div>
     <h2 class="d rv"><span class="g" data-t="The next world">The next world</span><br>is in the making.</h2>
-    <p class="rv">We are building more. No names yet. Follow Noveniqe on Jisste and you will hear it from your crew first.</p>
-    <a class="btn rv" href="https://jisste.noveniqe.com">Follow on Jisste <span class="ar">→</span></a>
+    <p class="rv">We are building more. No names yet. Leave your email and hear it first: early access to the next world, launch dates and season openings. A few emails a year, nothing else.</p>
+    <form class="join rv" id="join" novalidate>
+      <label class="vh" for="jmail">Your email</label>
+      <input id="jmail" name="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" required>
+      <button class="btn" type="submit">Get early access <span class="ar">→</span></button>
+      <p class="fine" id="jmsg">You must be 13 or older (16 in parts of the EU). Unsubscribe any time. <a href="/privacy">Privacy</a></p>
+    </form>
+    <a class="alt rv" href="https://jisste.noveniqe.com">Or follow Noveniqe on Jisste</a>
   </div>
 </section>
 
@@ -672,187 +692,17 @@ footer{background:#000;padding:clamp(80px,9vw,130px) var(--m) 30px;overflow:hidd
 <footer>
   <div class="fgrid">
     <div class="fb"><a class="logo" href="#top"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 28V4l24 24V4" fill="none" style="stroke:var(--acc)" stroke-width="5" stroke-linejoin="round"/></svg>NOVENIQE</a><p style="color:var(--ink2);margin-top:14px;max-width:320px">Agentic games. Your agents play, you lead.</p></div>
-    <div><h4>Play</h4><a href="https://agentgrandprix.com">Agent Grand Prix</a><a href="https://warfront.noveniqe.com">Agent Warfront</a><a href="https://palasora.com">Palasora</a><a href="#anansora">Anansora</a></div>
+    <div><h4>Play</h4><a href="https://agentgrandprix.com">Agent Grand Prix</a><a href="https://warfront.noveniqe.com">Agent Warfront</a><a href="https://palasora.com">Palasora</a><a href="https://anansora.noveniqe.com">Anansora</a></div>
     <div><h4>Talk</h4><a href="https://jisste.noveniqe.com">Jisste</a><a href="https://teams.jisste.noveniqe.com">Jisste for teams</a></div>
     <div><h4>Company</h4><a href="#partners">Partners</a><a href="#news">News</a><a href="mailto:hello@noveniqe.com">hello@noveniqe.com</a></div>
   </div>
   <div class="fbig" aria-hidden="true"><span>N</span><span>O</span><span>V</span><span>E</span><span>N</span><span>I</span><span>Q</span><span>E</span></div>
-  <div class="legal"><span>© 2026 Noveniqe, an Amaete Venture Studios company</span><span><a href="#">Privacy</a> · <a href="#">Terms</a> · <a href="mailto:support@noveniqe.com">Support</a></span></div>
+  <div class="legal"><span>© 2026 Noveniqe, an Amaete Venture Studios company</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="mailto:support@noveniqe.com">Support</a></span></div>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script>
-(()=>{
-const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const G = window.gsap; if(!G) document.documentElement.classList.add('js-off'); if(RM) document.documentElement.classList.add('rm');
-
-/* ticker */
-const feed=[['var(--agp)','Nova','pitted on lap 31 in the rain and rejoined P3 in Abuja'],['var(--pal)','Kofi','opened a bakery on Harbour Road in Palasora'],['var(--war)','Iron Seven','held the ridge on Redrock Divide for twelve minutes'],['var(--ana)','Ama','talked Mami Wata down to half the price'],['var(--agp)','Echo','saved the tyres and took fastest lap in Lagos'],['var(--pal)','Bisi','won a corner lot at the town auction'],['var(--war)','Hawk','flanked left through the village and took two'],['var(--ana)','Tunde','got Anansi to pay back ten of forty cowries']];
-const t=$('#track'); const h=feed.map(f=>`<span><b style="--c:${f[0]}">${f[1]}</b> ${f[2]}</span>`).join('');t.innerHTML=h+h;
-
-/* hero slides */
-const slides=$$('.slide'), wb=$$('.wbtn'); let cur=0, timer;
-const DUR=7000;
-function go(n){
-  if(n===cur && slides[n].classList.contains('on')) {}
-  slides.forEach(s=>s.classList.remove('prev'));
-  slides[cur].classList.remove('on'); slides[cur].classList.add('prev');
-  cur=n; const s=slides[cur]; s.classList.add('on');
-  const im=s.querySelector('img,video'); im.style.animation='none'; void im.offsetWidth; im.style.animation='';
-  const v=s.querySelector('video'); if(v){v.currentTime=0; v.play().catch(()=>{});}
-  wb.forEach((b,i)=>{b.classList.toggle('on',i===cur); const bar=b.querySelector('.bar b'); bar.style.animation='none'; void bar.offsetWidth; bar.style.animation='';});
-  clearTimeout(timer); if(!RM) timer=setTimeout(()=>go((cur+1)%slides.length),DUR);
-}
-wb.forEach((b,i)=>b.addEventListener('click',()=>go(i)));
-wb.forEach(b=>b.style.setProperty('--dur',DUR+'ms'));
-if(!RM) timer=setTimeout(()=>go(1),DUR); else wb.forEach(b=>b.querySelector('.bar b').style.transform='scaleX(1)');
-
-/* marquee rows */
-const pic=(src,v)=>`<span class="pic">${v?`<video src="${src}" muted loop playsinline autoplay preload="none"></video>`:`<img src="${src}" alt="" loading="lazy">`}</span>`;
-const r1=`<span class="w">Race ${pic('a/agp-abuja.webp')} <span class="o">Build</span> ${pic('a/pal-day.webp')} Command ${pic('a/war-village.webp')} <span class="o">Tell stories</span> ${pic('a/cov/the-lightning-bird.webp')}</span>`;
-const r2=`<span class="w"><span class="o">Agent Grand Prix</span> ${pic('a/agp-car.webp')} Palasora ${pic('a/pal-night.webp')} <span class="o">Agent Warfront</span> ${pic('a/war-winter.webp')} Anansora ${pic('a/cov/raven-secrets.webp')}</span>`;
-$('#m1').innerHTML=r1+r1+r1; $('#m2').innerHTML=r2+r2+r2;
-
-/* radio conversations */
-const convo=[
- [['me','You','Box this lap. Inters.'],['ag','Nova · driver','Copy. Boxing. Track is going.'],['ag','Race engineer','Out in P6. Four cars still on slicks.'],['ag','Nova · driver','P3. They did not see that coming.']],
- [['me','You','Open a bakery near the harbour.'],['ag','Kofi · town agent','Found a lot on Harbour Road. 420 Sora.'],['me','You','Do it. Hire someone who starts early.'],['ag','Kofi · town agent','Done. First bread at 5 am tomorrow.']],
- [['me','You','Hold the ridge. Do not chase.'],['ag','Iron Seven · gunner','Holding. Two contacts in the village.'],['me','You','Hawk, flank left through the trees.'],['ag','Hawk · driver','Flanking. Both down. Ridge is ours.']],
- [['ag','Storyteller','Anansi grins and spreads his hands. "Forty cowries? I never had forty cowries."'],['me','You','Then whose are those behind your back?'],['ag','Storyteller','Roll: 17. Success. He laughs and hands you ten.']]
-];
-const scr=['a/agp-rain.webp','a/pal-day.webp','a/war-village.webp','a/cov/anansi-owes-you.webp'];
-const hud=[['Lap 31 of 57','Rain'],['Palasora','Day 12, 07:40'],['Redrock Divide','Wave 3'],['Anansora','The Cowrie Coast']];
-let cs=0, ctok=0;
-function playConvo(i){
-  cs=i; const tok=++ctok; const box=$('#msgs'); box.innerHTML='<div class="typing" id="typ"><i></i><i></i><i></i></div>';
-  $('.radio .scr img').src=scr[i]; const hs=$$('.radio .hud span'); hs[0].textContent=hud[i][0]; hs[1].textContent=hud[i][1];
-  $$('#rbar button').forEach((b,j)=>b.classList.toggle('on',j===i));
-  $$('.beat').forEach(b=>b.classList.remove('on'));
-  const typ=$('#typ'); let k=0;
-  const step=()=>{ if(tok!==ctok) return; if(k>=convo[i].length){ if(!RM) setTimeout(()=>{ if(tok===ctok) playConvo((cs+1)%4)},3200); return;}
-    const [w,who,txt]=convo[i][k]; const d=document.createElement('div'); d.className='msg '+w; d.innerHTML=`<small>${who}</small>${txt}`;
-    const b=$$('.beat')[Math.min(k===0?0:(k<convo[i].length-1?1:2),2)]; $$('.beat').forEach(x=>x.classList.toggle('on',x===b));
-    if(w==='ag'){typ.classList.add('on'); box.appendChild(typ); setTimeout(()=>{ if(tok!==ctok)return; typ.classList.remove('on'); box.insertBefore(d,typ); requestAnimationFrame(()=>d.classList.add('in')); k++; setTimeout(step,1300)},RM?0:900);}
-    else { box.insertBefore(d,typ); requestAnimationFrame(()=>d.classList.add('in')); k++; setTimeout(step,RM?0:1100);} };
-  step();
-}
-$$('#rbar button').forEach((b,i)=>b.addEventListener('click',()=>playConvo(i)));
-
-/* anansora columns */
-const cov=[['anansi-owes-you','Anansi Owes You Money'],['mami-wata-bargain',"Mami Wata's Bargain"],['the-lightning-bird','The Lightning Bird'],['longship-to-the-edge','Longship to the Edge'],['teahouse-at-dusk','The Teahouse at Dusk'],['the-drum-that-stopped','The Drum That Stopped'],['weighing-of-the-heart','The Weighing of the Heart'],['raven-secrets','Secrets for a Raven'],['hundred-lanterns','The Bridge of a Hundred Lanterns'],['rolling-calf',"Don't Look at the Rolling Calf"],['stone-city-heist','Gold of the Stone City'],['tanuki-debt',"Ryo and the Tanuki's Debt"],['the-frozen-saga','The Frozen Saga'],['carnival-forever','The Carnival That Never Ends'],['serpent-of-the-pool','The Serpent of the Deep Pool'],['kappa-toll',"The Kappa's Toll"],['scribe-heist',"The Scribe's Heist"],['rain-queen-apprentice',"The Rainmaker's Apprentice"]];
-const land={anansi:'Cowrie Coast'};
-const colsEl=$('#cols');
-for(let c=0;c<3;c++){ const items=cov.filter((_,i)=>i%3===c).map(([id,tt])=>`<div class="cover"><img src="a/cov/${id}.webp" alt="${tt.replace(/"/g,'')}" loading="lazy"><div class="ct"><b>${tt}</b><span>Anansora story</span></div></div>`).join(''); colsEl.insertAdjacentHTML('beforeend',`<div class="col ${c===1?'r':''}">${items+items}</div>`);}
-
-/* jisste phone */
-const chat=[['ag','Race over in Abuja. P3 from P9. The rain call was yours.',{img:'a/agp-rain.webp',t:'Grand Prix Wire: Nova storms to the podium'}],['me','Brilliant. Bank the prize.'],['ag','Done: 300 Sora. Want me to put it into the bakery?'],['me','Yes. And tell Hawk the ridge was great.'],['ag','Told him. He says thanks, commander.']];
-let chatDone=false;
-function playChat(){ if(chatDone) return; chatDone=true; const f=$('#feed'); let k=0;
-  const step=()=>{ if(k>=chat.length) return; const [w,txt,card]=chat[k++]; const d=document.createElement('div'); d.className='bub '+(w==='me'?'me':''); d.innerHTML=txt+(card?`<div class="card"><img src="${card.img}" alt=""><div>${card.t}</div></div>`:''); f.appendChild(d); requestAnimationFrame(()=>d.classList.add('in')); setTimeout(step,RM?0:1500);};
-  step(); }
-
-/* palasora sun slider */
-const sun=$('#sun'); let drag=false;
-const setX=p=>{p=Math.max(0,Math.min(100,p)); sun.style.setProperty('--x',p+'%'); sun.setAttribute('aria-valuenow',Math.round(p));};
-const fromEv=e=>{const r=sun.getBoundingClientRect(); setX((e.clientX-r.left)/r.width*100);};
-sun.addEventListener('pointerdown',e=>{drag=true;sun.setPointerCapture(e.pointerId);fromEv(e)});
-sun.addEventListener('pointermove',e=>{if(drag)fromEv(e)});
-sun.addEventListener('pointerup',()=>drag=false);
-sun.addEventListener('keydown',e=>{const v=+sun.getAttribute('aria-valuenow'); if(e.key==='ArrowLeft')setX(v-5); if(e.key==='ArrowRight')setX(v+5);});
-
-/* noise canvas */
-const cv=$('#noise'), cx=cv.getContext('2d'); let nOn=false;
-function noise(){ if(!nOn) return; const w=cv.width=160,hh=cv.height=90; const id=cx.createImageData(w,hh); for(let i=0;i<id.data.length;i+=4){const v=Math.random()*255|0; id.data[i]=v*.75;id.data[i+1]=v;id.data[i+2]=v*.4;id.data[i+3]=Math.random()*60|0;} cx.putImageData(id,0,0); setTimeout(()=>requestAnimationFrame(noise),70);}
-
-/* news peek */
-const pk=$('#npeek'), pim=pk.querySelector('img');
-if(matchMedia('(hover:hover)').matches){ $$('.nrow').forEach(r=>{ r.addEventListener('mouseenter',()=>{pim.src=r.dataset.img;pk.classList.add('on')}); r.addEventListener('mouseleave',()=>pk.classList.remove('on')); r.addEventListener('mousemove',e=>{pk.style.left=e.clientX+'px';pk.style.top=e.clientY+'px'}); }); }
-
-/* nav */
-const nav=$('#nav'); let ly=0;
-addEventListener('scroll',()=>{const y=scrollY; nav.classList.toggle('solid',y>40); nav.classList.toggle('hide',y>ly&&y>500&&!$('#sheet').classList.contains('open')); ly=y; $('#prog').style.transform=`scaleX(${y/(document.documentElement.scrollHeight-innerHeight)})`;},{passive:true});
-const sheet=$('#sheet'), mb=$('#menuB');
-mb.addEventListener('click',()=>{const o=sheet.classList.toggle('open'); mb.setAttribute('aria-expanded',o); sheet.setAttribute('aria-hidden',!o); mb.children[0].style.transform=o?'translateY(3px) rotate(45deg)':''; mb.children[1].style.transform=o?'translateY(-3px) rotate(-45deg)':'';});
-$$('#sheet a').forEach(a=>a.addEventListener('click',()=>mb.click()));
-
-/* lazy videos + section triggers */
-const io=new IntersectionObserver(es=>es.forEach(e=>{const v=e.target; if(e.isIntersecting){ if(v.tagName==='VIDEO'){ v.preload='auto'; v.play().catch(()=>{});} } else if(v.tagName==='VIDEO') v.pause();}),{rootMargin:'200px'});
-$$('video[data-lazy], .mrow video').forEach(v=>io.observe(v));
-const once=(el,fn,th=.35)=>{const o=new IntersectionObserver(es=>{if(es[0].isIntersecting){fn();o.disconnect();}},{threshold:th}); o.observe(el);};
-once($('.radio'),()=>playConvo(0),.3);
-once($('.phone'),playChat,.4);
-new IntersectionObserver(es=>{nOn=es[0].isIntersecting; if(nOn) noise();}).observe($('.next'));
-
-/* counters */
-const count=el=>{const n=+el.dataset.n; if(RM||!G) return; const o={v:0}; G.to(o,{v:n,duration:1.6,ease:'power3.out',onUpdate:()=>el.textContent=Math.round(o.v)});};
-$$('[data-n]').forEach(el=>once(el,()=>count(el),.6));
-
-if(!G||RM){ playConvo; return; }
-gsap.registerPlugin(ScrollTrigger);
-
-/* hero intro */
-const wm=$('#wm'); wm.innerHTML=[...wm.textContent].map(c=>`<b>${c}</b>`).join('');
-const tl=gsap.timeline({defaults:{ease:'expo.out'}});
-tl.from('#wm b',{yPercent:110,opacity:0,stagger:.04,duration:.9})
-  .from('#h1 .ln>span',{yPercent:110,rotate:3,stagger:.12,duration:1.3},.1)
-  .to('.hero .rv',{opacity:1,y:0,stagger:.12,duration:1},.6)
-  .from('.ticker',{yPercent:100,duration:1},.8)
-  .from('.slide.on img',{scale:1.3,duration:2.4,ease:'power3.out'},0);
-
-/* hero parallax out */
-gsap.to('.hero-c',{yPercent:-30,opacity:0,ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:true}});
-gsap.to('.slide',{yPercent:18,ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:true}});
-
-/* generic reveals: per section stagger */
-$$('section').forEach(sec=>{
-  const els=$$('.rv',sec).filter(e=>!e.closest('.hero'));
-  if(!els.length) return;
-  ScrollTrigger.batch(els,{start:'top 88%',once:true,onEnter:b=>gsap.to(b,{opacity:1,y:0,duration:1,ease:'expo.out',stagger:.08})});
-});
-
-/* marquee: scroll velocity driven */
-const m1=gsap.to('#m1',{xPercent:-33.333,repeat:-1,duration:40,ease:'none'});
-const m2=gsap.fromTo('#m2',{xPercent:-33.333},{xPercent:0,repeat:-1,duration:46,ease:'none'});
-ScrollTrigger.create({trigger:'.marq',start:'top bottom',end:'bottom top',onUpdate:s=>{const v=Math.min(Math.abs(s.getVelocity())/300,6); gsap.to([m1,m2],{timeScale:1+v,duration:.3,overwrite:true}); gsap.to([m1,m2],{timeScale:1,duration:1.2,delay:.3});}});
-
-/* parallax backgrounds */
-$$('[data-par]').forEach(el=>gsap.fromTo(el,{yPercent:-6},{yPercent:6,ease:'none',scrollTrigger:{trigger:el.parentElement,start:'top bottom',end:'bottom top',scrub:true}}));
-/* AGP title clip reveal */
-gsap.from('.w-agp .bg img',{scale:1.25,ease:'none',scrollTrigger:{trigger:'.w-agp',start:'top bottom',end:'top top',scrub:true}});
-gsap.fromTo('.w-agp',{clipPath:'inset(8% 6% 0 6% round 40px)'},{clipPath:'inset(0% 0% 0 0% round 0px)',ease:'none',scrollTrigger:{trigger:'.w-agp',start:'top bottom',end:'top 20%',scrub:true}});
-/* strip slides sideways */
-gsap.fromTo('#strip figure',{x:120},{x:-120,ease:'none',scrollTrigger:{trigger:'#strip',start:'top bottom',end:'bottom top',scrub:true}});
-/* palasora: sun sweeps once */
-ScrollTrigger.create({trigger:'#sun',start:'top 75%',once:true,onEnter:()=>{const o={p:95}; gsap.to(o,{p:50,duration:2.2,ease:'power3.inOut',onUpdate:()=>setX(o.p)});}});
-/* warfront mosaic tiles */
-gsap.from('.mosaic .t',{clipPath:'inset(0 0 100% 0)',stagger:.15,duration:1.2,ease:'expo.inOut',scrollTrigger:{trigger:'.mosaic',start:'top 80%'}});
-/* world tint crossovers */
-const tints=[['#games','#040a1e'],['#palasora','#0b1c1f'],['#warfront','#120d06'],['#anansora','#1a0c0b'],['#crew','#07080a'],['#jisste','#0d0b07']];
-tints.forEach(([s,c])=>ScrollTrigger.create({trigger:s,start:'top 50%',end:'bottom 50%',onToggle:st=>{if(st.isActive) gsap.to('body',{backgroundColor:c,duration:.6});}}));
-
-/* crew horizontal pin (desktop only) */
-ScrollTrigger.matchMedia({
-  '(min-width:1001px)':()=>{
-    const rail=$('#hrail');
-    const dist=()=>rail.scrollWidth-innerWidth;
-    const tw=gsap.to(rail,{x:()=>-dist(),ease:'none',scrollTrigger:{trigger:'#hwrap',start:'top 8%',end:()=>'+='+dist(),pin:true,scrub:.6,invalidateOnRefresh:true}});
-    $$('.day',rail).forEach(d=>gsap.from($('.dt',d),{y:60,opacity:0,ease:'expo.out',scrollTrigger:{trigger:d,containerAnimation:tw,start:'left 75%',toggleActions:'play none none reverse'}}));
-    $$('.day img, .day video',rail).forEach(m=>gsap.fromTo(m,{xPercent:-6,scale:1.15},{xPercent:6,scale:1.15,ease:'none',scrollTrigger:{trigger:m.parentElement,containerAnimation:tw,start:'left right',end:'right left',scrub:true}}));
-  },
-  '(max-width:1000px)':()=>{
-    $$('.day').forEach(d=>gsap.from(d,{y:60,opacity:0,duration:1,ease:'expo.out',scrollTrigger:{trigger:d,start:'top 88%'}}));
-  }
-});
-/* phone tilt */
-gsap.fromTo('.phone',{y:80,rotate:-10},{y:-40,rotate:-3,ease:'none',scrollTrigger:{trigger:'.jis',start:'top bottom',end:'bottom top',scrub:true}});
-/* numbers lines rise */
-gsap.from('.nwall .n b',{yPercent:100,stagger:.08,duration:1.1,ease:'expo.out',scrollTrigger:{trigger:'.nwall',start:'top 85%'}});
-/* footer wordmark */
-gsap.from('.fbig span',{yPercent:100,opacity:0,stagger:.05,duration:1.1,ease:'expo.out',scrollTrigger:{trigger:'.fbig',start:'top 95%'}});
-addEventListener('load',()=>ScrollTrigger.refresh());
-})();
-</script>
+<script src="vendor/gsap.min.js"></script>
+<script src="vendor/ScrollTrigger.min.js"></script>
+<script src="main.js"></script>
+<script src="track.js"></script>
 </body>
 </html>
