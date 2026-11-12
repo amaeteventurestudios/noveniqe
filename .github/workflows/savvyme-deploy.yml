@@ -16,6 +16,7 @@ concurrency: deploy-savvyme
 jobs:
   deploy:
     runs-on: ubuntu-24.04-arm
+    outputs: { go: '${{ steps.done.outputs.go }}' }
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -74,3 +75,16 @@ jobs:
             else echo "::warning::https://$n doesn't answer yet (the first HTTPS certificate can take a minute)."; fi
           done
           [ "$ok" = 1 ] || { echo "::error::SavvyMe doesn't answer from outside."; exit 1; }
+      - name: Deployed
+        id: done
+        if: env.GO == '1'
+        run: echo go=1 >> "$GITHUB_OUTPUT"
+  # Then the live-site launch check on what was just deployed (never fails the deploy; see preflight.yml).
+  preflight:
+    needs: deploy
+    if: needs.deploy.outputs.go == '1'
+    permissions: { id-token: write, contents: read, issues: write }
+    uses: ./.github/workflows/preflight.yml
+    with:
+      app: SavvyMe
+      sites: "${{ vars.SAVVYME_DOMAIN || 'savvyme.amaete.com' }}"

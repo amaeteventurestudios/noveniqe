@@ -1,0 +1,65 @@
+# Preflight after a deploy: runs the live-site launch check (preflight.amaete.com) on the sites just deployed.
+# Every Onyx deploy in this repo calls it once its deploy succeeded; other repos can call it too:
+#   uses: amaeteventurestudios/noveniqe/.github/workflows/preflight.yml@main
+# No secret is needed: the job proves who it is with GitHub's own signed identity token (OIDC), which Preflight
+# accepts only from repositories of this account. It never fails the deploy. When a site is "Not ready yet" it
+# opens (or adds to) an issue for that site in the calling repo, so GitHub emails you; when every site is clear again it closes it.
+name: Preflight (live-site check)
+on:
+  workflow_call:
+    inputs:
+      sites: { type: string, required: true, description: 'Site names or addresses, space separated' }
+      app: { type: string, required: false, default: '' }
+  workflow_dispatch:
+    inputs:
+      sites:
+        description: 'Site names, space separated'
+        default: 'accounts.noveniqe.com noveniqe.com agentgrandprix.com palasora.com warfront.noveniqe.com app.jisste.noveniqe.com teams.jisste.noveniqe.com isoteh.amaete.com savvyme.amaete.com'
+      app: { description: 'Which app (for the issue title)', default: '' }
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check each site
+        env:
+          SITES: ${{ inputs.sites }}
+          APP: ${{ inputs.app }}
+          PREFLIGHT: ${{ vars.PREFLIGHT_URL || 'https://preflight.amaete.com' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          tok=$(curl -fsS -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$PREFLIGHT" | jq -r .value)
+          [ -n "$tok" ] && [ "$tok" != null ] || { echo "::warning::GitHub gave no identity token (the calling job needs permissions: id-token: write). Preflight skipped."; exit 0; }
+          echo "## Preflight ${APP:+for $APP}" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Site | Verdict | Summary |" >> "$GITHUB_STEP_SUMMARY"; echo "| --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          for s in $SITES; do
+            out=$(mktemp); code=000
+            for i in 1 2 3; do
+              code=$(curl -sS -m 90 -o "$out" -w '%{http_code}' -H "Authorization: Bearer $tok" --get --data-urlencode "url=$s" "$PREFLIGHT/api/scan" || echo 000)
+              [ "$code" = 200 ] && break; sleep 20
+            done
+            if [ "$code" != 200 ]; then
+              why=$(jq -r '.error // empty' "$out" 2>/dev/null | head -c 200)
+              echo "::warning::Preflight could not check $s (HTTP $code). $why"
+              echo "| $s | not checked (HTTP $code) | ${why//|/ } |" >> "$GITHUB_STEP_SUMMARY"; continue
+            fi
+            verdict=$(jq -r .verdict "$out"); summary=$(jq -r '.summary // ""' "$out" | tr '\n|' '  ')
+            fails=$(jq -r '[.checks[]? | select(.status=="fail") | .title] | join("; ")' "$out")
+            echo "$s: $verdict. $summary"
+            [ -n "$fails" ] && echo "  failing: $fails"
+            echo "| $s | $verdict | $summary |" >> "$GITHUB_STEP_SUMMARY"
+            title="Preflight: $s is not ready"
+            open=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number -q '.[0].number' 2>/dev/null || true)
+            if [ "$verdict" = not-ready ]; then
+              echo "::warning::$s is not ready: $fails"
+              body="After the ${APP:-latest} deploy ($(date -u '+%Y-%m-%d %H:%M UTC')) these checks failed on https://$s: $fails"$'\n\n'"Full report: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+              if [ -n "$open" ]; then gh issue comment "$open" -R "$GITHUB_REPOSITORY" -b "$body" || true; else gh issue create -R "$GITHUB_REPOSITORY" -t "$title" -b "$body" || true; fi
+            elif [ -n "$open" ]; then
+              gh issue close "$open" -R "$GITHUB_REPOSITORY" -c "$s cleared Preflight ($verdict) at $(date -u '+%Y-%m-%d %H:%M UTC')." || true
+            fi
+          done
