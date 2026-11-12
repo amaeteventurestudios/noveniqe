@@ -60,6 +60,8 @@ jobs:
           # the signaling server and its one dependency (ws), nothing else from node_modules
           mkdir -p "$RUNNER_TEMP/sig/server" "$RUNNER_TEMP/sig/src/net" "$RUNNER_TEMP/sig/node_modules"
           cp server/signalingServer.js server/roomStore.js "$RUNNER_TEMP/sig/server/"
+          # accounts (sign-in through the shared accounts and the player's kept kit), once the game has them
+          if [ -f server/account.js ]; then cp server/account.js "$RUNNER_TEMP/sig/server/"; fi
           cp src/net/protocol.js "$RUNNER_TEMP/sig/src/net/"
           cp -r node_modules/ws "$RUNNER_TEMP/sig/node_modules/"
           echo '{"type":"module","private":true}' > "$RUNNER_TEMP/sig/package.json"
