@@ -5,14 +5,14 @@
 #   1. In the console (vigilantyx.umanahsystems.com), open Devices, then Add a device, and copy the one-day code.
 #   2. Here: Run workflow, action "install", paste the code. The server shows up in the console within a minute.
 #
-# "status" shows whether the watcher runs. "remove" takes it off again.
+# "status" shows whether the watcher runs (and its last log lines). "start" starts it again. "remove" takes it off.
 name: Security watcher (server)
 on:
   workflow_dispatch:
     inputs:
       action:
         type: choice
-        options: [status, install, remove]
+        options: [status, install, start, remove]
         default: status
       code:
         description: 'install only: the one-day code from the console'
@@ -43,8 +43,13 @@ jobs:
               case "$CODE" in *[!A-Za-z0-9_-]*) echo '::error::That code has characters a console code never has. Copy it again.'; exit 1 ;; esac
               $SSH "curl -fsSL $CONSOLE/api/devices/install.sh -o /tmp/vx-install.sh && sudo sh /tmp/vx-install.sh $CODE; rm -f /tmp/vx-install.sh" | tee -a "$GITHUB_STEP_SUMMARY"
               ;;
+            start)
+              # The service keeps its state in /var/lib/vigilantyx-agent; systemd refuses to start it when that folder is missing.
+              $SSH 'sudo mkdir -p /var/lib/vigilantyx-agent && sudo systemctl daemon-reload && sudo systemctl enable vigilantyx-agent >/dev/null 2>&1; sudo systemctl restart vigilantyx-agent; sleep 5' || true
+              ;;
             remove)
               $SSH 'sudo systemctl disable --now vigilantyx-agent 2>/dev/null || true; sudo rm -f /etc/systemd/system/vigilantyx-agent.service /usr/local/bin/vigilantyx-agent; sudo rm -rf /etc/vigilantyx-agent; sudo systemctl daemon-reload; echo "The watcher is off this server."' | tee -a "$GITHUB_STEP_SUMMARY"
               ;;
           esac
-          $SSH 'if systemctl is-active --quiet vigilantyx-agent; then echo "Watcher: running since $(systemctl show -p ActiveEnterTimestamp --value vigilantyx-agent)"; else echo "Watcher: not running"; fi' | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$ACTION" = install ] && $SSH 'sudo mkdir -p /var/lib/vigilantyx-agent && sudo systemctl restart vigilantyx-agent; sleep 5' || true
+          $SSH 'if systemctl is-active --quiet vigilantyx-agent; then echo "Watcher: running since $(systemctl show -p ActiveEnterTimestamp --value vigilantyx-agent)"; else echo "Watcher: not running"; sudo systemctl status vigilantyx-agent --no-pager -n 0 2>&1 | head -8; sudo journalctl -u vigilantyx-agent --no-pager -n 15 2>&1; fi' | tee -a "$GITHUB_STEP_SUMMARY"
