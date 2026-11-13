@@ -50,15 +50,18 @@ jobs:
           $SCP onyx-accounts.tgz "$DEST:/tmp/"
           HOST_IP=$($SSH 'curl -fsS -m 10 https://api.ipify.org || hostname -I | cut -d" " -f1')
           $SSH "HOST_IP=$HOST_IP bash -s" < core/deploy/onyx-install.sh | tee -a "$GITHUB_STEP_SUMMARY"
-          $SSH "sudo mkdir -p /opt/onyx && echo $SHA | sudo tee /opt/onyx/ACCOUNTS_SHA >/dev/null"
       - name: Answers from outside
         if: env.GO == '1'
         run: |
           set -euo pipefail
           ip=$($SSH 'curl -fsS -m 10 https://api.ipify.org')
           u="https://onyx.${ip//./-}.sslip.io/health"
-          for i in $(seq 1 30); do curl -fsS -m 10 "$u" && break; sleep 5; done
+          ok=0
+          for i in $(seq 1 30); do if curl -fsS -m 10 "$u"; then ok=1; break; fi; sleep 5; done
+          [ "$ok" = 1 ] || { echo "No answer from $u" >&2; exit 1; }
           echo; echo "Spare address: $u" | tee -a "$GITHUB_STEP_SUMMARY"
+          # only now mark this version as deployed, so a failed check is retried on the next run
+          $SSH "sudo mkdir -p /opt/onyx && echo $SHA | sudo tee /opt/onyx/ACCOUNTS_SHA >/dev/null"
       - name: Deployed
         id: done
         if: env.GO == '1'
